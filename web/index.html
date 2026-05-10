@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>Fit GK Kaiseki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif; }
+  .card { background-color: white; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1); padding: 1rem; border: 1px solid rgb(226 232 240); }
+  .btn { padding: 0.5rem 0.75rem; border-radius: 0.375rem; font-weight: 500; transition: all 0.2s; cursor: pointer; border: 0; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background-color: rgb(37 99 235); color: white; }
+  .btn-primary:not(:disabled):hover { background-color: rgb(29 78 216); }
+  .btn-danger  { background-color: rgb(220 38 38); color: white; }
+  .btn-danger:not(:disabled):hover { background-color: rgb(185 28 28); }
+  .btn-ghost   { background-color: rgb(226 232 240); color: rgb(30 41 59); }
+  .btn-ghost:not(:disabled):hover { background-color: rgb(203 213 225); }
+  .input { padding: 0.25rem 0.5rem; border: 1px solid rgb(203 213 225); border-radius: 0.25rem; width: 6rem; }
+  pre.log { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+<div id="app" class="max-w-5xl mx-auto p-4 space-y-6">
+
+  <header class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-slate-800">Fit GK Kaiseki</h1>
+    <div class="flex items-center gap-3 text-sm">
+      <span :class="health.ok ? 'bg-green-500' : 'bg-red-500'" class="inline-block w-3 h-3 rounded-full"></span>
+      <span>{{ health.ok ? 'API 接続OK' : 'API 切断' }}</span>
+      <span v-if="status.running" class="text-amber-600 font-semibold">▶ {{ status.kind }} 演奏中</span>
+    </div>
+  </header>
+
+  <!-- Individual commands -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-3">個別操作 (/api/control)</h2>
+    <div v-if="!commands" class="text-slate-500 text-sm">読み込み中…</div>
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div v-for="(meta, name) in commands" :key="name"
+           :class="name === 'horn' ? 'border-2 border-red-500 bg-red-50' : 'border border-slate-200 bg-slate-50'"
+           class="rounded p-3">
+        <div class="font-semibold flex items-center gap-1">
+          <span v-if="name === 'horn'">⚠</span>
+          {{ name }}
+        </div>
+        <div class="text-xs text-slate-500 mb-2">LID 0x{{ hex(meta.lid) }} / IOCP 0x{{ hex(meta.iocp) }}</div>
+        <div class="text-xs text-slate-600 mb-2">{{ meta.description }}</div>
+        <div class="flex items-center gap-2">
+          <input v-if="meta.iocp === 15" v-model.number="durations[name]" type="number" min="0.1" step="0.1" class="input" />
+          <button v-if="name !== 'horn'"
+                  class="btn btn-primary text-sm"
+                  :disabled="busy" @click="fire(name)">実行</button>
+          <button v-else
+                  :class="hornArmed ? 'btn btn-danger text-sm animate-pulse' : 'btn text-sm bg-white text-red-600 border-2 border-red-500 hover:bg-red-100'"
+                  :disabled="busy" @click="onHornClick">
+            <span v-if="!hornArmed">🔒 ホーン</span>
+            <span v-else>🔥 確認: もう一度押す</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fun patterns -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-3">パリピ演奏 (/api/fun)</h2>
+    <div class="flex flex-wrap items-center gap-3 mb-3">
+      <label class="text-sm">BPM <input v-model.number="fun.bpm" type="number" min="40" max="240" class="input" /></label>
+      <label class="text-sm">小節数 <input v-model.number="fun.measures" type="number" min="1" max="64" class="input" /></label>
+      <button class="btn btn-danger text-sm" :disabled="!status.running" @click="stopFun">⏹ 停止</button>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+      <button class="btn btn-primary" :disabled="busy" @click="startFun('3way')">3way (HB+LB+HZ)</button>
+      <button class="btn btn-primary" :disabled="busy" @click="startFun('beat')">beat (HB+PS)</button>
+      <button class="btn btn-primary" :disabled="busy" @click="startFun('stereo')">stereo (L+R+HB)</button>
+      <button class="btn btn-primary" :disabled="busy" @click="startFun('polyrhythm')">polyrhythm 4:3</button>
+    </div>
+
+    <div class="border-t border-slate-200 pt-3 mt-3 space-y-2">
+      <div class="text-sm font-semibold text-slate-700">流し系 ループ (1=HZ / 2=HB / 3=LB)</div>
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="text-sm">positions <input v-model="seq.positions" type="text" class="input" style="width:16rem" placeholder="1,2,3,2,1,1,3" /></label>
+        <label class="text-sm">cycles <input v-model.number="seq.cycles" type="number" min="1" max="100" class="input" /></label>
+        <label class="text-sm flex items-center gap-2">speed
+          <input v-model.number="seq.speed" type="range" min="0.3" max="2.5" step="0.1" />
+          <span class="font-mono w-12 text-right">{{ seq.speed.toFixed(1) }}x</span>
+        </label>
+        <button class="btn btn-primary" :disabled="busy" @click="startSequence">▶ 実行</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs text-slate-600">プリセット:</span>
+        <button class="btn btn-ghost text-xs" @click="seq.positions='1,2,3'">chase 1,2,3</button>
+        <button class="btn btn-ghost text-xs" @click="seq.positions='1,2,3,2'">bounce 1,2,3,2</button>
+        <button class="btn btn-ghost text-xs" @click="seq.positions='1,2,3,2,1,1,3'">irregular 1,2,3,2,1,1,3</button>
+        <button class="btn btn-ghost text-xs" @click="seq.positions='2,3,2,3,1'">2x flicker + 1</button>
+      </div>
+      <div class="text-xs text-slate-500">⚠ HZ (1) は 0.15s 物理floor で clamp、 1.5x以上は HZ ステップ短縮されない</div>
+    </div>
+  </section>
+
+  <!-- Custom pattern -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-3">カスタムパターン (/api/fun/pattern)</h2>
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="text-sm">LID (hex) <input v-model="custom.lid" class="input" placeholder="1D" /></label>
+      <label class="text-sm">IOCP (hex) <input v-model="custom.iocp" class="input" placeholder="0F" /></label>
+      <label class="text-sm">on (秒) <input v-model.number="custom.on_s" type="number" step="0.05" class="input" /></label>
+      <label class="text-sm">off (秒) <input v-model.number="custom.off_s" type="number" step="0.05" class="input" /></label>
+      <label class="text-sm">cycles <input v-model.number="custom.cycles" type="number" min="1" class="input" /></label>
+      <button class="btn btn-primary" :disabled="busy" @click="startCustom">スタート</button>
+    </div>
+  </section>
+
+  <!-- Log -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-3">ログ (直近 {{ logs.length }} 件)</h2>
+    <pre class="log text-xs bg-slate-900 text-slate-100 rounded p-3 max-h-96 overflow-auto">
+<span v-for="(l, i) in logs" :key="i" :class="l.error ? 'text-red-300' : ''">[{{ l.time }}] {{ l.method }} {{ l.url }} → {{ l.text }}
+</span>
+    </pre>
+  </section>
+
+  <footer class="text-xs text-slate-500 text-center pt-4">
+    Honda Fit GK5 RS MT — research project, own vehicle only. No vehicle is harmed in production of beats.
+  </footer>
+</div>
+
+<script>
+const { createApp, reactive, ref, onMounted, onUnmounted } = Vue;
+
+createApp({
+  setup() {
+    const health = reactive({ ok: false });
+    const commands = ref(null);
+    const durations = reactive({});
+    const fun = reactive({ bpm: 120, measures: 8 });
+    const chase = reactive({ cycles: 20, speed: 1.4 });
+    const seq = reactive({ positions: '1,2,3', cycles: 8, speed: 1.4 });
+    const custom = reactive({ lid: '1D', iocp: '0F', on_s: 0.1, off_s: 0.1, cycles: 10 });
+    const status = reactive({ running: false, kind: null, last_result: null });
+    const logs = ref([]);
+    const busy = ref(false);
+    const hornArmed = ref(false);
+    let hornArmTimer = null;
+
+    function hex(n) { return Number(n).toString(16).toUpperCase().padStart(2, '0'); }
+
+    function pushLog(method, url, body, response, error=false) {
+      const time = new Date().toLocaleTimeString();
+      let text;
+      try { text = typeof response === 'string' ? response : JSON.stringify(response); }
+      catch { text = String(response); }
+      logs.value.unshift({ time, method, url, text, error });
+      if (logs.value.length > 50) logs.value.pop();
+    }
+
+    async function call(method, url, params=null) {
+      try {
+        const u = new URL(url, location.origin);
+        if (params) Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
+        const res = await fetch(u, { method });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          pushLog(method, u.pathname + u.search, params, data || res.statusText, true);
+          return null;
+        }
+        pushLog(method, u.pathname + u.search, params, data);
+        return data;
+      } catch (e) {
+        pushLog(method, url, params, e.message, true);
+        return null;
+      }
+    }
+
+    async function loadCommands() {
+      const data = await call('GET', '/api/control/list');
+      if (data) {
+        commands.value = data;
+        Object.entries(data).forEach(([name, m]) => {
+          durations[name] = m.default_duration_s ?? 5.0;
+        });
+      }
+    }
+
+    async function fire(name) {
+      busy.value = true;
+      const meta = commands.value[name];
+      const params = meta && meta.iocp === 15 ? { duration_s: durations[name] } : null;
+      await call('POST', `/api/control/${name}`, params);
+      busy.value = false;
+    }
+
+    function onHornClick() {
+      if (hornArmed.value) {
+        hornArmed.value = false;
+        if (hornArmTimer) { clearTimeout(hornArmTimer); hornArmTimer = null; }
+        fire('horn');
+      } else {
+        hornArmed.value = true;
+        if (hornArmTimer) clearTimeout(hornArmTimer);
+        hornArmTimer = setTimeout(() => { hornArmed.value = false; hornArmTimer = null; }, 3000);
+      }
+    }
+
+    async function startFun(kind) {
+      busy.value = true;
+      const data = await call('POST', `/api/fun/${kind}`, { bpm: fun.bpm, measures: fun.measures });
+      if (data) status.running = true;
+      busy.value = false;
+    }
+
+    async function startChase() {
+      busy.value = true;
+      const data = await call('POST', '/api/fun/chase', { cycles: chase.cycles, speed: chase.speed });
+      if (data) status.running = true;
+      busy.value = false;
+    }
+
+    async function startSequence() {
+      busy.value = true;
+      const data = await call('POST', '/api/fun/sequence', { positions: seq.positions, cycles: seq.cycles, speed: seq.speed });
+      if (data) status.running = true;
+      busy.value = false;
+    }
+
+    async function startCustom() {
+      busy.value = true;
+      const lid = parseInt(custom.lid, 16);
+      const iocp = parseInt(custom.iocp, 16);
+      if (isNaN(lid) || isNaN(iocp)) { pushLog('POST', '/api/fun/pattern', null, 'invalid LID/IOCP hex', true); busy.value = false; return; }
+      const data = await call('POST', '/api/fun/pattern', { lid, iocp, on_s: custom.on_s, off_s: custom.off_s, cycles: custom.cycles });
+      if (data) status.running = true;
+      busy.value = false;
+    }
+
+    async function stopFun() {
+      busy.value = true;
+      await call('POST', '/api/fun/stop');
+      status.running = false;
+      busy.value = false;
+    }
+
+    async function checkHealth() {
+      try {
+        const r = await fetch('/api/health');
+        health.ok = r.ok;
+      } catch { health.ok = false; }
+    }
+
+    async function pollStatus() {
+      try {
+        const r = await fetch('/api/fun/status');
+        if (r.ok) {
+          const d = await r.json();
+          status.running = !!d.running;
+          status.kind = d.kind;
+          status.last_result = d.last_result;
+        }
+      } catch { /* ignore */ }
+    }
+
+    let timer = null;
+    onMounted(() => {
+      checkHealth();
+      loadCommands();
+      timer = setInterval(() => { checkHealth(); pollStatus(); }, 1000);
+    });
+    onUnmounted(() => { if (timer) clearInterval(timer); });
+
+    return { health, commands, durations, fun, chase, seq, custom, status, logs, busy, hornArmed, hex, fire, startFun, startChase, startSequence, startCustom, stopFun, onHornClick };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
