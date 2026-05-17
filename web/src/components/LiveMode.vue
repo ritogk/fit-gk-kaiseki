@@ -117,7 +117,7 @@ function handleExit() {
 }
 
 function isActive(id: string): boolean {
-  return active.value.has(id) || pressedPads.value.has(id) || pulsedPads.value.has(id) || isLoopActive(id)
+  return pressedPads.value.has(id) || pulsedPads.value.has(id) || isLoopActive(id)
 }
 
 function padColorClass(pad: Pad): string {
