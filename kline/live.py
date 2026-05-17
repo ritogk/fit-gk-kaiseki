@@ -19,6 +19,8 @@ def _cs(d):
 
 _IO_CONTROL_TEMPLATE = [0x80, ECM, TESTER, 0x08, 0x30, 0x00, 0x0F, 0, 0, 0, 0, 0]
 _STOP_DIAG = [0x80, ECM, TESTER, 0x01, 0x20]
+_TESTER_PRESENT = [0x80, ECM, TESTER, 0x01, 0x3E]
+_CMD_INTERVAL = 0.015
 
 
 class LiveSession:
@@ -103,9 +105,9 @@ class LiveSession:
             return
         lid, iocp, _, _ = LIDS[cmd_id]
         if cmd_id in self.PULSE_CMDS:
-            self._q.put(("on", lid, iocp))
+            self._q.put(("pulse", lid, iocp))
         else:
-            self._q.put(("on", lid, 0x0F))
+            self._q.put(("on", lid, iocp))
 
     def note_off(self, cmd_id: str):
         if cmd_id not in LIDS:
@@ -142,14 +144,21 @@ class LiveSession:
         self._s.reset_input_buffer()
         self._s.write(bytes(p) + bytes([_cs(p)]))
         self._s.flush()
-        time.sleep(0.015)
+        time.sleep(_CMD_INTERVAL)
         self._s.reset_input_buffer()
 
     def _raw_stop_diag(self):
         self._s.reset_input_buffer()
         self._s.write(bytes(_STOP_DIAG) + bytes([_cs(_STOP_DIAG)]))
         self._s.flush()
-        time.sleep(0.015)
+        time.sleep(_CMD_INTERVAL)
+        self._s.reset_input_buffer()
+
+    def _raw_tester_present(self):
+        self._s.reset_input_buffer()
+        self._s.write(bytes(_TESTER_PRESENT) + bytes([_cs(_TESTER_PRESENT)]))
+        self._s.flush()
+        time.sleep(_CMD_INTERVAL)
         self._s.reset_input_buffer()
 
     def _refire_active(self):
@@ -202,11 +211,10 @@ class LiveSession:
             if action == "quit":
                 self._running = False
                 return
+            elif action == "pulse":
+                self._raw_fire(lid, iocp)
             elif action == "on":
-                is_pulse = iocp == 0x01
-                if is_pulse:
-                    self._raw_fire(lid, iocp)
-                elif self._merge_tl_tr_on(lid):
+                if self._merge_tl_tr_on(lid):
                     pass
                 elif lid not in self._active_lids:
                     fire_lids.append((lid, iocp))
@@ -236,6 +244,8 @@ class LiveSession:
                     if self._active_lids:
                         self._refire_active()
 
+    _KEEPALIVE_S = 3.0
+
     def _worker(self):
         last_keepalive = time.time()
         last_beat = time.time()
@@ -252,9 +262,13 @@ class LiveSession:
             except queue.Empty:
                 pass
 
-            if self._active_lids and time.time() - last_keepalive > 2.0:
-                self._refire_active()
-                last_keepalive = time.time()
+            now = time.time()
+            if now - last_keepalive > self._KEEPALIVE_S:
+                if self._active_lids:
+                    self._refire_active()
+                else:
+                    self._raw_tester_present()
+                last_keepalive = now
 
             if self._loop_lids and beat_interval > 0:
                 now = time.time()

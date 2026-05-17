@@ -38,6 +38,6 @@ def health():
 
 
 # Static frontend at /
-WEB_DIR = pathlib.Path(__file__).resolve().parent.parent / "web"
-if WEB_DIR.is_dir():
-    app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
+WEB_DIST = pathlib.Path(__file__).resolve().parent.parent / "web" / "dist"
+if WEB_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=str(WEB_DIST), html=True), name="web")

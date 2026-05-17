@@ -16,6 +16,7 @@ router = APIRouter(prefix="/api/live", tags=["live"])
 async def live_ws(ws: WebSocket):
     await ws.accept()
     session = None
+    should_stop = False
     try:
         session = start_session()
         await ws.send_json({"type": "ready"})
@@ -47,6 +48,9 @@ async def live_ws(ws: WebSocket):
                 session.loop_off(cmd_id)
             elif msg_type == "bpm":
                 session.set_bpm(float(msg.get("bpm", 120)))
+            elif msg_type == "exit":
+                should_stop = True
+                break
             elif msg_type == "ping":
                 await ws.send_json({"type": "pong"})
                 continue
@@ -63,4 +67,5 @@ async def live_ws(ws: WebSocket):
     except Exception:
         pass
     finally:
-        stop_session()
+        if should_stop:
+            stop_session()

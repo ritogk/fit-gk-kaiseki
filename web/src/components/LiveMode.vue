@@ -40,8 +40,10 @@ const HORN_PAD: Pad = { id: 'horn', label: 'HORN', key: ' ', color: 'red', mode:
 const pressedKeys = ref<Set<string>>(new Set())
 const pressedPads = ref<Set<string>>(new Set())
 const pulsedPads = ref<Set<string>>(new Set())
+const pointerToPad = new Map<number, Pad>()
 
-function padDown(pad: Pad) {
+function padDown(pad: Pad, e?: PointerEvent) {
+  if (e) pointerToPad.set(e.pointerId, pad)
   if (pad.mode === 'pulse') {
     noteOn(pad.id)
     pulsedPads.value.add(pad.id)
@@ -58,6 +60,14 @@ function padUp(pad: Pad) {
   if (pad.mode === 'hold' && pressedPads.value.has(pad.id)) {
     pressedPads.value.delete(pad.id)
     noteOff(pad.id)
+  }
+}
+
+function onPointerRelease(e: PointerEvent) {
+  const pad = pointerToPad.get(e.pointerId)
+  if (pad) {
+    pointerToPad.delete(e.pointerId)
+    padUp(pad)
   }
 }
 
@@ -202,6 +212,8 @@ onMounted(() => {
   connect()
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+  document.addEventListener('pointerup', onPointerRelease)
+  document.addEventListener('pointercancel', onPointerRelease)
   document.addEventListener('fullscreenchange', onFullscreenChange)
 })
 
@@ -210,6 +222,8 @@ onUnmounted(() => {
   disconnect()
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
+  document.removeEventListener('pointerup', onPointerRelease)
+  document.removeEventListener('pointercancel', onPointerRelease)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
 })
 </script>
@@ -277,10 +291,7 @@ onUnmounted(() => {
         <button v-for="pad in LIGHT_PADS" :key="pad.id"
                 :class="[padColorClass(pad), isActive(pad.id) ? 'shadow-lg scale-95' : '', loopPads.has(pad.id) ? 'ring-2 ring-amber-400' : '']"
                 class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75"
-                @pointerdown.prevent="padDown(pad)"
-                @pointerup.prevent="padUp(pad)"
-                @pointerleave="padUp(pad)"
-                @pointercancel="padUp(pad)">
+                @pointerdown.prevent="padDown(pad, $event)">
           <span class="text-2xl sm:text-3xl font-bold"
                 :class="isActive(pad.id) ? 'text-slate-900' : 'text-slate-300'">
             {{ pad.label }}
@@ -295,10 +306,7 @@ onUnmounted(() => {
         <button v-for="pad in ACTION_PADS" :key="pad.id"
                 :class="[padColorClass(pad), isActive(pad.id) ? 'shadow-lg scale-95' : '']"
                 class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75"
-                @pointerdown.prevent="padDown(pad)"
-                @pointerup.prevent="padUp(pad)"
-                @pointerleave="padUp(pad)"
-                @pointercancel="padUp(pad)">
+                @pointerdown.prevent="padDown(pad, $event)">
           <span class="text-lg sm:text-xl font-bold"
                 :class="isActive(pad.id) ? 'text-slate-900' : 'text-slate-300'">
             {{ pad.label }}
@@ -309,10 +317,7 @@ onUnmounted(() => {
         <!-- Horn -->
         <button :class="[padColorClass(HORN_PAD), isActive(HORN_PAD.id) ? 'shadow-lg scale-95' : '']"
                 class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75 col-span-1"
-                @pointerdown.prevent="padDown(HORN_PAD)"
-                @pointerup.prevent="padUp(HORN_PAD)"
-                @pointerleave="padUp(HORN_PAD)"
-                @pointercancel="padUp(HORN_PAD)">
+                @pointerdown.prevent="padDown(HORN_PAD, $event)">
           <span class="text-2xl sm:text-3xl font-bold"
                 :class="isActive(HORN_PAD.id) ? 'text-white' : 'text-red-300'">
             HORN

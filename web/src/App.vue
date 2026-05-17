@@ -88,14 +88,14 @@ async function startSequence() {
   }
   if (seq.beats) params.beats = seq.beats
   const data = await apiCall('POST', '/api/fun/sequence', params)
-  if (data) status.running = true
+  if (data) { status.running = true; startStatusPolling() }
   busy.value = false
 }
 
 async function startFun(kind: string) {
   busy.value = true
   const data = await apiCall('POST', `/api/fun/${kind}`, { bpm: fun.bpm, measures: fun.measures })
-  if (data) status.running = true
+  if (data) { status.running = true; startStatusPolling() }
   busy.value = false
 }
 
@@ -110,7 +110,7 @@ async function startCustom() {
   const data = await apiCall('POST', '/api/fun/pattern', {
     lid, iocp, on_s: custom.on_s, off_s: custom.off_s, cycles: custom.cycles,
   })
-  if (data) status.running = true
+  if (data) { status.running = true; startStatusPolling() }
   busy.value = false
 }
 
@@ -118,6 +118,7 @@ async function stopFun() {
   busy.value = true
   await apiCall('POST', '/api/fun/stop')
   status.running = false
+  stopStatusPolling()
   busy.value = false
 }
 
@@ -135,21 +136,30 @@ async function pollStatus() {
       const d = await r.json()
       status.running = !!d.running
       status.kind = d.kind
+      if (!status.running) stopStatusPolling()
     }
   } catch { /* ignore */ }
 }
 
 // --- Lifecycle ---
 
-let timer: ReturnType<typeof setInterval> | null = null
+let statusTimer: ReturnType<typeof setInterval> | null = null
+
+function startStatusPolling() {
+  if (statusTimer) return
+  statusTimer = setInterval(pollStatus, 1000)
+}
+
+function stopStatusPolling() {
+  if (statusTimer) { clearInterval(statusTimer); statusTimer = null }
+}
 
 onMounted(() => {
   checkHealth()
   loadCommands()
-  timer = setInterval(() => { checkHealth(); pollStatus() }, 1000)
 })
 
-onUnmounted(() => { if (timer) clearInterval(timer) })
+onUnmounted(() => stopStatusPolling())
 </script>
 
 <template>

@@ -5,12 +5,24 @@ export function useWebSocket() {
   const active = ref<Set<string>>(new Set())
   const error = ref<string | null>(null)
   let ws: WebSocket | null = null
+  let pingTimer: ReturnType<typeof setInterval> | null = null
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let intentionalClose = false
 
   function connect() {
+    intentionalClose = false
+    cleanup()
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
     ws = new WebSocket(`${proto}//${location.host}/api/live/ws`)
 
-    ws.onopen = () => { error.value = null }
+    ws.onopen = () => {
+      error.value = null
+      pingTimer = setInterval(() => {
+        if (ws?.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }))
+        }
+      }, 5000)
+    }
 
     ws.onmessage = (e) => {
       try {
@@ -29,6 +41,10 @@ export function useWebSocket() {
     ws.onclose = () => {
       connected.value = false
       active.value = new Set()
+      stopPing()
+      if (!intentionalClose) {
+        reconnectTimer = setTimeout(connect, 1000)
+      }
       ws = null
     }
 
@@ -37,7 +53,21 @@ export function useWebSocket() {
     }
   }
 
+  function stopPing() {
+    if (pingTimer) { clearInterval(pingTimer); pingTimer = null }
+  }
+
+  function cleanup() {
+    stopPing()
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
+  }
+
   function disconnect() {
+    intentionalClose = true
+    cleanup()
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'exit' }))
+    }
     ws?.close()
   }
 
