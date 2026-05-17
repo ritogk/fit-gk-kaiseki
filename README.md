@@ -4,14 +4,6 @@
 
 自分の車両 + 私的環境での研究目的限定です。 公道で勝手に光らせたりホーンを鳴らしたりはしないでください。 Honda とも当然無関係。
 
-## スクリーンショット
-
-### シーンエディター
-![シーンエディター](docs/screenshots/normal-mode-dark.png)
-
-### ライブ演奏モード
-![ライブモード](docs/screenshots/live-mode.png)
-
 ## できたこと
 
 ECM(0x10) に対して以下を IO Control で叩けるところまで判明:
@@ -114,6 +106,14 @@ scripts/    CLI ラッパー
 research/   解析中の生スクリプト (失敗込み)
 docs/       findings.md + スクリーンショット
 ```
+
+## UI
+
+### シーンエディター
+![シーンエディター](docs/screenshots/normal-mode-dark.png)
+
+### ライブ演奏モード
+![ライブモード](docs/screenshots/live-mode.png)
 
 ## ライセンス
 
