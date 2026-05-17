@@ -8,6 +8,20 @@ const { logs, apiCall } = useApi()
 
 const sceneEditor = ref<InstanceType<typeof SceneEditor> | null>(null)
 
+// --- Dark mode ---
+
+const dark = ref(localStorage.getItem('gk-dark') === 'true')
+
+function toggleDark() {
+  dark.value = !dark.value
+  localStorage.setItem('gk-dark', String(dark.value))
+  document.documentElement.classList.toggle('dark', dark.value)
+}
+
+onMounted(() => {
+  document.documentElement.classList.toggle('dark', dark.value)
+})
+
 // --- State ---
 
 const health = reactive({ ok: false })
@@ -134,12 +148,12 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 </script>
 
 <template>
-  <div class="bg-slate-100 min-h-screen">
+  <div class="bg-slate-100 dark:bg-slate-900 min-h-screen text-slate-800 dark:text-slate-200 transition-colors">
     <div class="max-w-5xl mx-auto p-4 space-y-6">
 
       <!-- Header -->
       <header class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-slate-800">Fit GK Kaiseki</h1>
+        <h1 class="text-2xl font-bold">Fit GK Kaiseki</h1>
         <div class="flex items-center gap-3 text-sm">
           <span :class="health.ok ? 'bg-green-500' : 'bg-red-500'"
                 class="inline-block w-3 h-3 rounded-full" />
@@ -147,6 +161,9 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
           <span v-if="status.running" class="text-amber-600 font-semibold">
             ▶ {{ status.kind }} 演奏中
           </span>
+          <button class="btn btn-ghost text-xs py-1 px-2" @click="toggleDark">
+            {{ dark ? '☀️' : '🌙' }}
+          </button>
         </div>
       </header>
 
@@ -201,7 +218,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
         <div v-if="!commands" class="text-slate-500 text-sm mt-3">読み込み中…</div>
         <div v-else class="space-y-1 mt-3">
           <div v-for="(meta, name) in commands" :key="name"
-               :class="name === 'horn' ? 'border border-red-300 bg-red-50' : 'border border-slate-200 bg-slate-50'"
+               :class="name === 'horn' ? 'border border-red-300 bg-red-50 dark:bg-red-950' : 'border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700'"
                class="rounded px-3 py-1.5 flex items-center gap-3 text-sm">
             <span class="font-semibold w-24 shrink-0">{{ name }}</span>
             <span class="text-xs text-slate-400 w-28 shrink-0">
