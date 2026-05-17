@@ -150,7 +150,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
       <!-- Sequence / Scene Editor -->
       <section class="card">
-        <h2 class="text-lg font-bold mb-3">流し系 ループ</h2>
+        <h2 class="text-lg font-bold mb-3">シーンエディター</h2>
 
         <SceneEditor ref="sceneEditor" v-model:positions="seq.positions" :speed="seq.speed" />
 

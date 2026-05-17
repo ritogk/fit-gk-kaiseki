@@ -130,28 +130,108 @@ onUnmounted(() => stopPreview())
 
 defineExpose({ playing, startPreview, stopPreview })
 
-// --- Presets ---
+// --- Preset generation ---
 
-const PRESETS: { label: string; scenes: Scene[] }[] = [
+type Preset = { label: string; scenes: Scene[] }
+
+// Light groups for generation
+const ALL = [1, 2, 3, 4, 5, 6, 7] as const
+const LEFT_TO_RIGHT = [6, 3, 2, 7] as const   // TL → LB → HB → TR (横方向)
+const UPPER = [6, 3, 2, 7] as const            // 上段
+const LOWER = [4, 5] as const                  // 下段
+const LEFT_SIDE = [6, 3, 4] as const           // 左半分
+const RIGHT_SIDE = [7, 2, 5] as const          // 右半分
+
+function generateSweep(lights: readonly number[]): Scene[] {
+  return lights.map((l) => [l])
+}
+
+function generateWave(lights: readonly number[]): Scene[] {
+  const forward = lights.map((l) => [l])
+  const back = lights.slice(1, -1).reverse().map((l) => [l])
+  return [...forward, ...back]
+}
+
+function generateSlide(lights: readonly number[], windowSize: number): Scene[] {
+  const result: Scene[] = []
+  for (let i = 0; i <= lights.length - windowSize; i++) {
+    result.push(lights.slice(i, i + windowSize) as unknown as Scene)
+  }
+  return result
+}
+
+function generateBuildUp(lights: readonly number[]): Scene[] {
+  return lights.map((_, i) => lights.slice(0, i + 1) as unknown as Scene)
+}
+
+function generateTearDown(lights: readonly number[]): Scene[] {
+  return generateBuildUp(lights).reverse()
+}
+
+function generateAlternate(a: readonly number[], b: readonly number[]): Scene[] {
+  return [[...a], [...b]]
+}
+
+function generatePingPong(lights: readonly number[]): Scene[] {
+  const forward = lights.map((l) => [l])
+  const back = lights.slice(0, -1).reverse().map((l) => [l])
+  return [...forward, ...back]
+}
+
+function generateRandom(): Scene[] {
+  const count = 3 + Math.floor(Math.random() * 5)
+  const scenes: Scene[] = []
+  for (let i = 0; i < count; i++) {
+    const scene: number[] = []
+    for (const pos of ALL) {
+      if (Math.random() > 0.5) scene.push(pos)
+    }
+    if (scene.includes(6) && scene.includes(7)) {
+      scene.splice(scene.indexOf(6), 1)
+      scene.splice(scene.indexOf(7), 1)
+      scene.push(1)
+    }
+    if (scene.length > 0) scenes.push(scene.sort((a, b) => a - b))
+  }
+  return scenes.length > 0 ? scenes : [[1]]
+}
+
+const HAND_PICKED: Preset[] = [
   { label: 'chase HZ,HB,LB', scenes: [[1], [2], [3]] },
-  { label: 'full sweep', scenes: [[1], [2], [3], [4], [5]] },
-  { label: 'wave', scenes: [[1], [2], [3], [4], [5], [4], [3], [2]] },
-  { label: 'slide', scenes: [[1, 2], [2, 3], [3, 4], [4, 5]] },
-  { label: 'blast', scenes: [[1, 2, 3], [4, 5], [1, 2, 3]] },
-  { label: '全同時', scenes: [[1, 2, 3, 4, 5, 6, 7]] },
   { label: 'HZ→HB+FG→LB+PS', scenes: [[1], [2, 5], [3, 4]] },
-  { label: 'TL→TR交互', scenes: [[6], [7]] },
-  { label: 'TL+LB→TR+LB', scenes: [[6, 3], [7, 3]] },
-  { label: '外→内', scenes: [[6, 7], [3], [2], [4, 5]] },
-  { label: '内→外', scenes: [[2], [3], [6, 7], [4, 5]] },
-  { label: 'ビルドアップ', scenes: [[6], [6, 3], [6, 3, 2], [6, 3, 2, 4], [6, 3, 2, 4, 5]] },
-  { label: 'ping pong', scenes: [[6], [3], [2], [7], [2], [3]] },
-  { label: 'ジグザグ', scenes: [[6], [2], [3], [7], [5], [4]] },
-  { label: '左流し', scenes: [[7], [2], [3], [6], [4, 5]] },
-  { label: '点滅交互', scenes: [[6, 2, 4], [7, 3, 5]] },
+  { label: '全同時', scenes: [[1, 2, 3, 4, 5, 6, 7]] },
   { label: 'ハートビート', scenes: [[1, 2, 3], [], [1, 2, 3], []] },
-  { label: '開閉', scenes: [[6, 7], [3, 4, 5], [2], [3, 4, 5], [6, 7]] },
 ]
+
+function generateAll(): Preset[] {
+  return [
+    ...HAND_PICKED,
+    { label: '横sweep', scenes: generateSweep(LEFT_TO_RIGHT) },
+    { label: '横wave', scenes: generateWave(LEFT_TO_RIGHT) },
+    { label: '横slide2', scenes: generateSlide(LEFT_TO_RIGHT, 2) },
+    { label: '横slide3', scenes: generateSlide(LEFT_TO_RIGHT, 3) },
+    { label: '横ping pong', scenes: generatePingPong(LEFT_TO_RIGHT) },
+    { label: '横ビルドアップ', scenes: generateBuildUp(LEFT_TO_RIGHT) },
+    { label: '横ティアダウン', scenes: generateTearDown(LEFT_TO_RIGHT) },
+    { label: '上下交互', scenes: generateAlternate(UPPER, LOWER) },
+    { label: '左右交互', scenes: generateAlternate(LEFT_SIDE, RIGHT_SIDE) },
+    { label: 'TL→TR交互', scenes: [[6], [7]] },
+    { label: 'TL+LB→TR+HB', scenes: [[6, 3], [7, 2]] },
+    { label: '外→内', scenes: generateSweep([6, 3, 2, 4, 5, 7].reverse()) },
+    { label: '内→外', scenes: generateSweep([2, 3, 6, 7, 4, 5]) },
+    { label: '全ビルドアップ', scenes: generateBuildUp(ALL) },
+    { label: '全ティアダウン', scenes: generateTearDown(ALL) },
+    { label: '開閉', scenes: [[6, 7], [3, 4, 5], [2], [3, 4, 5], [6, 7]] },
+    { label: '点滅交互', scenes: generateAlternate([6, 2, 4], [7, 3, 5]) },
+  ]
+}
+
+const PRESETS = ref(generateAll())
+
+function regenerateRandom() {
+  const random: Preset = { label: 'ランダム', scenes: generateRandom() }
+  loadPreset(random.scenes)
+}
 </script>
 
 <template>
@@ -186,6 +266,9 @@ const PRESETS: { label: string; scenes: Scene[] }[] = [
                 class="btn btn-ghost text-xs"
                 @click="loadPreset(p.scenes)">
           {{ p.label }}
+        </button>
+        <button class="btn btn-primary text-xs" @click="regenerateRandom">
+          🎲 ランダム
         </button>
       </div>
     </div>
