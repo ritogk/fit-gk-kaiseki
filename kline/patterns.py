@@ -179,10 +179,10 @@ def play_chase(cycles=20, hz_on=0.15, hb_on=0.05, lb_on=0.05, gap=0.025, speed=1
 
 FG = 0x20  # fog
 
-SEQUENCE_LIDS = {1: HZ, 2: HB, 3: LB, 4: PS, 5: FG}
+SEQUENCE_LIDS = {1: HZ, 2: HB, 3: LB, 4: PS, 5: FG, 6: TL, 7: TR}
 
 
-def play_sequence(steps=None, cycles=80, on_hz=0.15, on_hb=0.05, on_lb=0.05, on_ps=0.05, on_fg=0.05, gap=0.025, speed=1.4, cmd_delay=0.020):
+def play_sequence(steps=None, cycles=80, on_hz=0.15, on_hb=0.05, on_lb=0.05, on_ps=0.05, on_fg=0.05, on_tl=0.15, on_tr=0.15, gap=0.025, speed=1.4, cmd_delay=0.020):
     """Run a custom step sequence where 1=HZ, 2=HB, 3=LB, 4=PS, 5=FG.
 
     Each step is a list of position numbers to fire simultaneously.
@@ -203,6 +203,8 @@ def play_sequence(steps=None, cycles=80, on_hz=0.15, on_hb=0.05, on_lb=0.05, on_
         3: max(0.025, on_lb / speed),
         4: max(0.025, on_ps / speed),
         5: max(0.025, on_fg / speed),
+        6: max(0.15, on_tl / speed),
+        7: max(0.15, on_tr / speed),
     }
 
     with KLineClient() as cli:

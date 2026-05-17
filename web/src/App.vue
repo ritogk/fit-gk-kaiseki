@@ -6,6 +6,8 @@ import type { CommandMap } from './types'
 
 const { logs, apiCall } = useApi()
 
+const sceneEditor = ref<InstanceType<typeof SceneEditor> | null>(null)
+
 // --- State ---
 
 const health = reactive({ ok: false })
@@ -148,9 +150,9 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
       <!-- Sequence / Scene Editor -->
       <section class="card">
-        <h2 class="text-lg font-bold mb-3">流し系 ループ (1=HZ / 2=HB / 3=LB / 4=PS / 5=FG)</h2>
+        <h2 class="text-lg font-bold mb-3">流し系 ループ</h2>
 
-        <SceneEditor v-model:positions="seq.positions" />
+        <SceneEditor ref="sceneEditor" v-model:positions="seq.positions" :speed="seq.speed" />
 
         <div class="flex flex-wrap items-end gap-3">
           <label class="text-sm">
@@ -170,6 +172,14 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
           <button class="btn btn-primary" :disabled="busy" @click="startSequence">▶ 実行</button>
           <button class="btn btn-danger text-sm" :disabled="!status.running" @click="stopFun">
             ⏹ 停止
+          </button>
+          <button v-if="!sceneEditor?.playing"
+                  class="btn btn-ghost text-sm" @click="sceneEditor?.startPreview()">
+            ▶ プレビュー
+          </button>
+          <button v-else
+                  class="btn btn-danger text-sm" @click="sceneEditor?.stopPreview()">
+            ⏹ プレビュー停止
           </button>
         </div>
       </section>

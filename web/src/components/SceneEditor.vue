@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import CarFace from './CarFace.vue'
 import type { Scene } from '../types'
 
 const STORAGE_KEY = 'gk-scenes'
 
 const positions = defineModel<string>('positions', { default: '1,2,3' })
+const props = defineProps<{ speed: number }>()
 
 // --- Scene state ---
 
@@ -49,12 +50,32 @@ const currentLights = computed(() => scenes.value[selected.value] ?? [])
 function toggleLight(pos: number) {
   const scene = scenes.value[selected.value]
   if (!scene) return
-  const idx = scene.indexOf(pos)
-  if (idx >= 0) scene.splice(idx, 1)
-  else {
-    scene.push(pos)
-    scene.sort((a, b) => a - b)
+
+  const has = (p: number) => scene.includes(p)
+  const remove = (p: number) => { const i = scene.indexOf(p); if (i >= 0) scene.splice(i, 1) }
+  const add = (p: number) => { if (!has(p)) scene.push(p) }
+
+  if (pos === 6 || pos === 7) {
+    const other = pos === 6 ? 7 : 6
+    if (has(1)) {
+      remove(1)
+      add(other)
+    } else if (has(pos)) {
+      remove(pos)
+    } else {
+      if (has(other)) {
+        remove(other)
+        add(1)
+      } else {
+        add(pos)
+      }
+    }
+  } else {
+    if (has(pos)) remove(pos)
+    else add(pos)
   }
+
+  scene.sort((a, b) => a - b)
   save()
 }
 
@@ -83,17 +104,53 @@ function loadPreset(preset: Scene[]) {
   save()
 }
 
+// --- Preview playback ---
+
+const playing = ref(false)
+let previewTimer: ReturnType<typeof setInterval> | null = null
+
+const previewInterval = computed(() => Math.round(250 / props.speed))
+
+function startPreview() {
+  stopPreview()
+  playing.value = true
+  selected.value = 0
+  previewTimer = setInterval(() => {
+    selected.value = (selected.value + 1) % scenes.value.length
+  }, previewInterval.value)
+}
+
+function stopPreview() {
+  playing.value = false
+  if (previewTimer) { clearInterval(previewTimer); previewTimer = null }
+}
+
+watch(previewInterval, () => { if (playing.value) startPreview() })
+onUnmounted(() => stopPreview())
+
+defineExpose({ playing, startPreview, stopPreview })
+
 // --- Presets ---
 
 const PRESETS: { label: string; scenes: Scene[] }[] = [
-  { label: 'chase 1,2,3', scenes: [[1], [2], [3]] },
-  { label: 'full 1→5', scenes: [[1], [2], [3], [4], [5]] },
-  { label: 'slide [1,2]→[4,5]', scenes: [[1, 2], [2, 3], [3, 4], [4, 5]] },
+  { label: 'chase HZ,HB,LB', scenes: [[1], [2], [3]] },
+  { label: 'full sweep', scenes: [[1], [2], [3], [4], [5]] },
+  { label: 'wave', scenes: [[1], [2], [3], [4], [5], [4], [3], [2]] },
+  { label: 'slide', scenes: [[1, 2], [2, 3], [3, 4], [4, 5]] },
   { label: 'blast', scenes: [[1, 2, 3], [4, 5], [1, 2, 3]] },
-  { label: 'wave 1→5→2', scenes: [[1], [2], [3], [4], [5], [4], [3], [2]] },
-  { label: 'sandwich', scenes: [[2, 3], [1], [4, 5], [1]] },
-  { label: '全同時', scenes: [[1, 2, 3, 4, 5]] },
+  { label: '全同時', scenes: [[1, 2, 3, 4, 5, 6, 7]] },
   { label: 'HZ→HB+FG→LB+PS', scenes: [[1], [2, 5], [3, 4]] },
+  { label: 'TL→TR交互', scenes: [[6], [7]] },
+  { label: 'TL+LB→TR+LB', scenes: [[6, 3], [7, 3]] },
+  { label: '外→内', scenes: [[6, 7], [3], [2], [4, 5]] },
+  { label: '内→外', scenes: [[2], [3], [6, 7], [4, 5]] },
+  { label: 'ビルドアップ', scenes: [[6], [6, 3], [6, 3, 2], [6, 3, 2, 4], [6, 3, 2, 4, 5]] },
+  { label: 'ping pong', scenes: [[6], [3], [2], [7], [2], [3]] },
+  { label: 'ジグザグ', scenes: [[6], [2], [3], [7], [5], [4]] },
+  { label: '左流し', scenes: [[7], [2], [3], [6], [4, 5]] },
+  { label: '点滅交互', scenes: [[6, 2, 4], [7, 3, 5]] },
+  { label: 'ハートビート', scenes: [[1, 2, 3], [], [1, 2, 3], []] },
+  { label: '開閉', scenes: [[6, 7], [3, 4, 5], [2], [3, 4, 5], [6, 7]] },
 ]
 </script>
 
@@ -120,7 +177,7 @@ const PRESETS: { label: string; scenes: Scene[] }[] = [
   <div class="flex flex-col sm:flex-row gap-4 items-start mb-3">
     <div class="shrink-0">
       <div class="text-xs text-slate-500 mb-1 text-center">シーン #{{ selected + 1 }}</div>
-      <CarFace :lights="currentLights" interactive @toggle="toggleLight" />
+      <CarFace :lights="currentLights" :interactive="!playing" @toggle="toggleLight" />
     </div>
     <div class="min-w-0">
       <div class="flex flex-wrap gap-1.5">
@@ -131,10 +188,6 @@ const PRESETS: { label: string; scenes: Scene[] }[] = [
           {{ p.label }}
         </button>
       </div>
-      <div class="text-xs text-slate-500 mt-2">
-        ⚠ HZ (1) は 0.15s 物理floor で clamp。FG (5) はライトON時のみ視認可。[1,2]で同時点灯。
-      </div>
-      <div class="text-xs text-slate-400 mt-1 font-mono">positions: {{ positionsComputed }}</div>
     </div>
   </div>
 </template>

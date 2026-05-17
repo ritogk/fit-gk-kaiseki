@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   lights: number[]
   mini?: boolean
   interactive?: boolean
@@ -9,20 +9,26 @@ const emit = defineEmits<{
   toggle: [pos: number]
 }>()
 
-// Left side (viewer's left): outside → inside = LB, HB, HZ
+function isOn(pos: number): boolean {
+  const hz = props.lights.includes(1)
+  if ((pos === 6 || pos === 7) && hz) return true
+  return props.lights.includes(pos)
+}
+
+// Left side (viewer's left): outside → inside = LB, HB, TL
 const LEFT_TOP = [
   { pos: 3, label: 'LB' },
   { pos: 2, label: 'HB' },
-  { pos: 1, label: 'HZ' },
+  { pos: 6, label: 'TL' },
 ]
 const LEFT_BOTTOM = [
   { pos: 4, label: 'PS' },
   { pos: 5, label: 'FG' },
 ]
 
-// Right side (mirrored): inside → outside = HZ, HB, LB
+// Right side (mirrored): inside → outside = TR, HB, LB
 const RIGHT_TOP = [
-  { pos: 1, label: 'HZ' },
+  { pos: 7, label: 'TR' },
   { pos: 2, label: 'HB' },
   { pos: 3, label: 'LB' },
 ]
@@ -39,11 +45,11 @@ const RIGHT_BOTTOM = [
     <div class="flex flex-col gap-0.5">
       <div class="flex gap-0.5">
         <span v-for="l in LEFT_TOP" :key="'lt'+l.pos+l.label"
-              class="light-mini" :class="{ on: lights.includes(l.pos) }" />
+              class="light-mini" :class="{ on: isOn(l.pos) }" />
       </div>
       <div class="flex gap-0.5 justify-start">
         <span v-for="l in LEFT_BOTTOM" :key="'lb'+l.pos+l.label"
-              class="light-mini" :class="{ on: lights.includes(l.pos) }" />
+              class="light-mini" :class="{ on: isOn(l.pos) }" />
       </div>
     </div>
     <!-- Divider -->
@@ -52,29 +58,29 @@ const RIGHT_BOTTOM = [
     <div class="flex flex-col gap-0.5">
       <div class="flex gap-0.5">
         <span v-for="l in RIGHT_TOP" :key="'rt'+l.pos+l.label"
-              class="light-mini" :class="{ on: lights.includes(l.pos) }" />
+              class="light-mini" :class="{ on: isOn(l.pos) }" />
       </div>
       <div class="flex gap-0.5 justify-end">
         <span v-for="l in RIGHT_BOTTOM" :key="'rb'+l.pos+l.label"
-              class="light-mini" :class="{ on: lights.includes(l.pos) }" />
+              class="light-mini" :class="{ on: isOn(l.pos) }" />
       </div>
     </div>
   </div>
 
   <!-- Full: clickable car front face -->
-  <div v-else class="bg-slate-800 rounded-lg p-4 inline-flex gap-3 items-start">
+  <div v-else class="bg-slate-800 rounded-lg p-4 inline-flex gap-3 items-center">
     <!-- Left side -->
     <div class="flex flex-col gap-3">
       <div class="flex gap-3">
         <div v-for="l in LEFT_TOP" :key="'lt'+l.pos+l.label"
-             class="light" :class="{ on: lights.includes(l.pos), interactive }"
+             class="light" :class="{ on: isOn(l.pos), interactive }"
              @click="interactive && emit('toggle', l.pos)">
           {{ l.label }}
         </div>
       </div>
       <div class="flex gap-3 justify-start">
         <div v-for="l in LEFT_BOTTOM" :key="'lb'+l.pos+l.label"
-             class="light" :class="{ on: lights.includes(l.pos), interactive }"
+             class="light" :class="{ on: isOn(l.pos), interactive }"
              @click="interactive && emit('toggle', l.pos)">
           {{ l.label }}
         </div>
@@ -86,14 +92,14 @@ const RIGHT_BOTTOM = [
     <div class="flex flex-col gap-3">
       <div class="flex gap-3">
         <div v-for="l in RIGHT_TOP" :key="'rt'+l.pos+l.label"
-             class="light" :class="{ on: lights.includes(l.pos), interactive }"
+             class="light" :class="{ on: isOn(l.pos), interactive }"
              @click="interactive && emit('toggle', l.pos)">
           {{ l.label }}
         </div>
       </div>
       <div class="flex gap-3 justify-end">
         <div v-for="l in RIGHT_BOTTOM" :key="'rb'+l.pos+l.label"
-             class="light" :class="{ on: lights.includes(l.pos), interactive }"
+             class="light" :class="{ on: isOn(l.pos), interactive }"
              @click="interactive && emit('toggle', l.pos)">
           {{ l.label }}
         </div>

@@ -99,6 +99,8 @@ def fun_sequence(
     on_lb: float = 0.05,
     on_ps: float = 0.05,
     on_fg: float = 0.05,
+    on_tl: float = 0.15,
+    on_tr: float = 0.15,
     gap: float = 0.025,
     cmd_delay: float = 0.020,
 ):
@@ -111,7 +113,8 @@ def fun_sequence(
         raise HTTPException(400, "positions cannot be empty")
     return _start("sequence", patterns.play_sequence,
                   steps=steps, cycles=cycles, speed=speed,
-                  on_hz=on_hz, on_hb=on_hb, on_lb=on_lb, on_ps=on_ps, on_fg=on_fg, gap=gap,
+                  on_hz=on_hz, on_hb=on_hb, on_lb=on_lb, on_ps=on_ps, on_fg=on_fg,
+                  on_tl=on_tl, on_tr=on_tr, gap=gap,
                   cmd_delay=cmd_delay)
 
 
