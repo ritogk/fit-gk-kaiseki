@@ -53,5 +53,17 @@ export function useWebSocket() {
     ws?.send(JSON.stringify({ type: 'all_off' }))
   }
 
-  return { connected, active, error, connect, disconnect, noteOn, noteOff, allOff }
+  function loopOn(id: string) {
+    ws?.send(JSON.stringify({ type: 'loop_on', id }))
+  }
+
+  function loopOff(id: string) {
+    ws?.send(JSON.stringify({ type: 'loop_off', id }))
+  }
+
+  function setBpm(bpm: number) {
+    ws?.send(JSON.stringify({ type: 'bpm', bpm }))
+  }
+
+  return { connected, active, error, connect, disconnect, noteOn, noteOff, allOff, loopOn, loopOff, setBpm }
 }

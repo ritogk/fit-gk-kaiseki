@@ -41,6 +41,12 @@ async def live_ws(ws: WebSocket):
                 session.note_off(cmd_id)
             elif msg_type == "all_off":
                 session.all_off()
+            elif msg_type == "loop_on":
+                session.loop_on(cmd_id)
+            elif msg_type == "loop_off":
+                session.loop_off(cmd_id)
+            elif msg_type == "bpm":
+                session.set_bpm(float(msg.get("bpm", 120)))
             elif msg_type == "ping":
                 await ws.send_json({"type": "pong"})
                 continue

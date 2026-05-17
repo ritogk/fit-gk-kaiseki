@@ -28,6 +28,8 @@ class LiveSession:
         self._q: queue.Queue = queue.Queue()
         self._thread: threading.Thread | None = None
         self._active_lids: set[int] = set()
+        self._loop_lids: set[int] = set()
+        self._bpm: float = 120.0
         self._running = False
         self._locked = False
 
@@ -114,6 +116,21 @@ class LiveSession:
     def all_off(self):
         self._q.put(("all_off", None, None))
 
+    def loop_on(self, cmd_id: str):
+        if cmd_id not in LIDS:
+            return
+        lid, _, _, _ = LIDS[cmd_id]
+        self._q.put(("loop_on", lid, None))
+
+    def loop_off(self, cmd_id: str):
+        if cmd_id not in LIDS:
+            return
+        lid, _, _, _ = LIDS[cmd_id]
+        self._q.put(("loop_off", lid, None))
+
+    def set_bpm(self, bpm: float):
+        self._bpm = max(40.0, min(240.0, bpm))
+
     def get_active(self) -> set[str]:
         lid_to_name = {v[0]: k for k, v in LIDS.items()}
         return {lid_to_name[lid] for lid in self._active_lids if lid in lid_to_name}
@@ -180,7 +197,6 @@ class LiveSession:
 
     def _process_batch(self, batch):
         """Process a batch of messages, firing simultaneous note_ons together."""
-        # Separate into on/off/other for batching
         fire_lids = []
         for action, lid, iocp in batch:
             if action == "quit":
@@ -195,19 +211,21 @@ class LiveSession:
                 elif lid not in self._active_lids:
                     fire_lids.append((lid, iocp))
             elif action == "off":
-                # Process pending offs after all ons
                 pass
             elif action == "all_off":
                 self._raw_stop_diag()
                 self._active_lids.clear()
+                self._loop_lids.clear()
                 fire_lids.clear()
+            elif action == "loop_on":
+                self._loop_lids.add(lid)
+            elif action == "loop_off":
+                self._loop_lids.discard(lid)
 
-        # Batch-fire all new lids with minimal cmd_delay
         for lid, iocp in fire_lids:
             self._raw_fire(lid, iocp)
             self._active_lids.add(lid)
 
-        # Process offs after ons (so simultaneous on+off of different lids works)
         for action, lid, _ in batch:
             if action == "off":
                 if self._split_hz_off(lid):
@@ -220,19 +238,39 @@ class LiveSession:
 
     def _worker(self):
         last_keepalive = time.time()
+        last_beat = time.time()
+        loop_phase = False
         while self._running:
-            try:
-                first = self._q.get(timeout=0.5)
-            except queue.Empty:
-                if self._active_lids and time.time() - last_keepalive > 2.0:
-                    self._refire_active()
-                    last_keepalive = time.time()
-                continue
+            beat_interval = 60.0 / self._bpm / 2 if self._loop_lids else 0.0
+            timeout = min(beat_interval, 0.5) if beat_interval > 0 else 0.5
 
-            # Batch: grab everything else waiting in the queue
-            batch = [first] + self._drain_queue()
-            self._process_batch(batch)
-            last_keepalive = time.time()
+            try:
+                first = self._q.get(timeout=timeout)
+                batch = [first] + self._drain_queue()
+                self._process_batch(batch)
+                last_keepalive = time.time()
+            except queue.Empty:
+                pass
+
+            if self._active_lids and time.time() - last_keepalive > 2.0:
+                self._refire_active()
+                last_keepalive = time.time()
+
+            if self._loop_lids and beat_interval > 0:
+                now = time.time()
+                if now - last_beat >= beat_interval:
+                    loop_phase = not loop_phase
+                    self._raw_stop_diag()
+                    held = self._active_lids - self._loop_lids
+                    if loop_phase:
+                        for lid in self._loop_lids:
+                            self._raw_fire(lid)
+                    for lid in held:
+                        self._raw_fire(lid)
+                    last_beat = now
+                    last_keepalive = now
+            else:
+                loop_phase = False
 
 
 _session: LiveSession | None = None

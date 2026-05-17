@@ -5,7 +5,7 @@ import CarFace from './CarFace.vue'
 
 const emit = defineEmits<{ exit: [] }>()
 
-const { connected, active, error, connect, disconnect, noteOn, noteOff, allOff } = useWebSocket()
+const { connected, active, error, connect, disconnect, noteOn, noteOff, allOff, loopOn, loopOff, setBpm } = useWebSocket()
 
 // --- Pad definitions ---
 
@@ -30,8 +30,7 @@ const LIGHT_PADS: Pad[] = [
 const ACTION_PADS: Pad[] = [
   { id: 'lock',    label: 'LOCK',   key: 'z', color: 'green',  mode: 'pulse' },
   { id: 'unlock',  label: 'UNLOCK', key: 'x', color: 'green',  mode: 'pulse' },
-  { id: 'trunk',   label: 'TRUNK',  key: 'c', color: 'blue',   mode: 'pulse' },
-  { id: 'chirp',   label: 'CHIRP',  key: 'v', color: 'purple', mode: 'pulse' },
+  { id: 'chirp',   label: 'CHIRP',  key: 'c', color: 'purple', mode: 'pulse' },
 ]
 
 const HORN_PAD: Pad = { id: 'horn', label: 'HORN', key: ' ', color: 'red', mode: 'hold' }
@@ -89,16 +88,19 @@ function findPadByKey(key: string): Pad | undefined {
 function handleAllOff() {
   allOff()
   pressedPads.value.clear()
+  loopPads.value.clear()
+  syncLoopTimer()
 }
 
 function handleExit() {
   handleAllOff()
+  if (loopTimer) { clearInterval(loopTimer); loopTimer = null }
   disconnect()
   emit('exit')
 }
 
 function isActive(id: string): boolean {
-  return active.value.has(id) || pressedPads.value.has(id) || pulsedPads.value.has(id)
+  return active.value.has(id) || pressedPads.value.has(id) || pulsedPads.value.has(id) || isLoopActive(id)
 }
 
 function padColorClass(pad: Pad): string {
@@ -117,6 +119,46 @@ function padColorClass(pad: Pad): string {
   return map[pad.color] ?? ''
 }
 
+// --- Rhythm loop ---
+
+const loopPads = ref<Set<string>>(new Set())
+const bpm = ref(120)
+const loopPhase = ref(false)
+let loopTimer: ReturnType<typeof setInterval> | null = null
+
+function toggleLoop(pad: Pad) {
+  if (loopPads.value.has(pad.id)) {
+    loopPads.value.delete(pad.id)
+    loopOff(pad.id)
+  } else {
+    loopPads.value.add(pad.id)
+    loopOn(pad.id)
+  }
+  syncLoopTimer()
+}
+
+function onBpmChange(e: Event) {
+  const val = Number((e.target as HTMLInputElement).value)
+  bpm.value = val
+  setBpm(val)
+  syncLoopTimer()
+}
+
+function syncLoopTimer() {
+  if (loopTimer) { clearInterval(loopTimer); loopTimer = null }
+  if (loopPads.value.size > 0) {
+    const interval = 60000 / bpm.value / 2
+    loopPhase.value = true
+    loopTimer = setInterval(() => { loopPhase.value = !loopPhase.value }, interval)
+  } else {
+    loopPhase.value = false
+  }
+}
+
+function isLoopActive(id: string): boolean {
+  return loopPads.value.has(id) && loopPhase.value
+}
+
 // --- Monitor ---
 
 const showMonitor = ref(true)
@@ -126,8 +168,12 @@ const CMD_TO_POS: Record<string, number> = {
 }
 
 const monitorLights = computed(() => {
+  const ids = new Set([...active.value, ...pressedPads.value])
+  for (const id of loopPads.value) {
+    if (loopPhase.value) ids.add(id)
+  }
   const lids: number[] = []
-  for (const id of [...active.value, ...pressedPads.value]) {
+  for (const id of ids) {
     const pos = CMD_TO_POS[id]
     if (pos && !lids.includes(pos)) lids.push(pos)
   }
@@ -160,6 +206,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (loopTimer) clearInterval(loopTimer)
   disconnect()
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
@@ -177,7 +224,8 @@ onUnmounted(() => {
         <h1 class="text-lg font-bold">LIVE MODE</h1>
         <span :class="connected ? 'bg-green-500' : 'bg-red-500'"
               class="inline-block w-2.5 h-2.5 rounded-full" />
-        <span v-if="error" class="text-red-400 text-xs">{{ error }}</span>
+        <span v-if="!connected && !error" class="text-yellow-400 text-xs">接続中…</span>
+        <span v-if="error" class="text-red-400 text-xs">K-Lineデバイス未接続</span>
       </div>
       <div class="flex items-center gap-2">
         <button class="px-3 py-1 rounded text-xs bg-slate-700 hover:bg-slate-600"
@@ -207,10 +255,27 @@ onUnmounted(() => {
     <!-- Pad grid -->
     <div class="flex-1 flex flex-col gap-3 p-4 overflow-hidden">
 
+      <!-- Loop controls -->
+      <div class="flex items-center gap-3 px-1 shrink-0">
+        <span class="text-xs text-slate-400 font-bold">LOOP</span>
+        <input type="range" min="40" max="240" step="1"
+               :value="bpm" @input="onBpmChange"
+               class="flex-1 max-w-48" />
+        <span class="text-xs text-slate-400 font-mono w-20">{{ bpm }} BPM</span>
+        <div class="flex gap-1">
+          <button v-for="pad in LIGHT_PADS" :key="'l'+pad.id"
+                  :class="loopPads.has(pad.id) ? 'bg-amber-500 text-slate-900' : 'bg-slate-700 text-slate-400'"
+                  class="px-2 py-0.5 rounded text-xs font-bold transition-colors"
+                  @click="toggleLoop(pad)">
+            {{ pad.label }}
+          </button>
+        </div>
+      </div>
+
       <!-- Lights -->
       <div class="flex-1 grid grid-cols-4 gap-3" style="grid-template-rows: 1fr 1fr">
         <button v-for="pad in LIGHT_PADS" :key="pad.id"
-                :class="[padColorClass(pad), isActive(pad.id) ? 'shadow-lg scale-95' : '']"
+                :class="[padColorClass(pad), isActive(pad.id) ? 'shadow-lg scale-95' : '', loopPads.has(pad.id) ? 'ring-2 ring-amber-400' : '']"
                 class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75"
                 @pointerdown.prevent="padDown(pad)"
                 @pointerup.prevent="padUp(pad)"
@@ -220,12 +285,13 @@ onUnmounted(() => {
                 :class="isActive(pad.id) ? 'text-slate-900' : 'text-slate-300'">
             {{ pad.label }}
           </span>
+          <span v-if="loopPads.has(pad.id)" class="text-xs mt-0.5 text-amber-300 font-bold">LOOP</span>
           <span class="text-xs mt-1 opacity-60 uppercase">{{ pad.key === ' ' ? 'SPACE' : pad.key }}</span>
         </button>
       </div>
 
       <!-- Actions + Horn -->
-      <div class="grid gap-3" style="grid-template-columns: repeat(4, 1fr) 2fr; height: 25%">
+      <div class="grid gap-3" style="grid-template-columns: repeat(3, 1fr) 2fr; height: 25%">
         <button v-for="pad in ACTION_PADS" :key="pad.id"
                 :class="[padColorClass(pad), isActive(pad.id) ? 'shadow-lg scale-95' : '']"
                 class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75"
@@ -258,7 +324,7 @@ onUnmounted(() => {
 
     <!-- Keyboard hint -->
     <div class="text-center text-xs text-slate-500 pb-2">
-      Q W E R / A S D = ライト | Z X C V = アクション | SPACE = ホーン | ESC = 終了
+      Q W E R / A S D = ライト | Z X C = アクション | SPACE = ホーン | ESC = 終了
     </div>
   </div>
 </template>
