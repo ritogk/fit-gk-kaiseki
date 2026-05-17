@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted, onUnmounted } from 'vue'
 import SceneEditor from './components/SceneEditor.vue'
+import LiveMode from './components/LiveMode.vue'
 import { useApi } from './composables/useApi'
 import type { CommandMap } from './types'
 
 const { logs, apiCall } = useApi()
 
 const sceneEditor = ref<InstanceType<typeof SceneEditor> | null>(null)
+
+// --- Live mode ---
+
+const liveMode = ref(false)
 
 // --- Dark mode ---
 
@@ -161,6 +166,9 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
           <span v-if="status.running" class="text-amber-600 font-semibold">
             ▶ {{ status.kind }} 演奏中
           </span>
+          <button class="btn btn-primary text-xs py-1 px-2" @click="liveMode = true">
+            LIVE
+          </button>
           <button class="btn btn-ghost text-xs py-1 px-2" @click="toggleDark">
             {{ dark ? '☀️' : '🌙' }}
           </button>
@@ -299,4 +307,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
       </footer>
     </div>
   </div>
+
+  <!-- Live Mode overlay -->
+  <LiveMode v-if="liveMode" @exit="liveMode = false" />
 </template>

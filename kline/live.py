@@ -1,0 +1,262 @@
+"""Persistent K-Line session for real-time live performance.
+
+Keeps the serial port open and processes note_on/note_off commands
+via a dedicated worker thread for minimum latency (~20-40ms end-to-end).
+"""
+import queue
+import threading
+import time
+
+import serial
+
+from .client import PORT, BAUD, ECM, TESTER, GATEWAY, _serial_lock
+from .commands import LIDS
+
+
+def _cs(d):
+    return sum(d) & 0xFF
+
+
+_IO_CONTROL_TEMPLATE = [0x80, ECM, TESTER, 0x08, 0x30, 0x00, 0x0F, 0, 0, 0, 0, 0]
+_STOP_DIAG = [0x80, ECM, TESTER, 0x01, 0x20]
+
+
+class LiveSession:
+    def __init__(self, port=None):
+        self.port = port or PORT
+        self._s: serial.Serial | None = None
+        self._q: queue.Queue = queue.Queue()
+        self._thread: threading.Thread | None = None
+        self._active_lids: set[int] = set()
+        self._running = False
+        self._locked = False
+
+    def start(self):
+        if not _serial_lock.acquire(blocking=False):
+            raise RuntimeError("K-Line port is busy")
+        self._locked = True
+        try:
+            self._connect()
+            self._running = True
+            self._thread = threading.Thread(target=self._worker, daemon=True)
+            self._thread.start()
+        except Exception:
+            self._release()
+            raise
+
+    def stop(self):
+        self._running = False
+        self._q.put(("quit", None, None))
+        if self._thread:
+            self._thread.join(timeout=3.0)
+            self._thread = None
+        if self._s:
+            try:
+                self._raw_stop_diag()
+            except Exception:
+                pass
+            try:
+                self._s.close()
+            except Exception:
+                pass
+            self._s = None
+        self._active_lids.clear()
+        self._release()
+
+    def _release(self):
+        if self._locked:
+            try:
+                _serial_lock.release()
+            finally:
+                self._locked = False
+
+    def _connect(self):
+        s = serial.Serial(self.port, BAUD, timeout=0.05)
+        s.dtr = False
+        s.rts = False
+        time.sleep(0.3)
+        s.reset_input_buffer()
+        s.break_condition = True
+        time.sleep(0.025)
+        s.break_condition = False
+        time.sleep(0.025)
+        sc_p = [0x81, GATEWAY, TESTER, 0x81]
+        s.write(bytes(sc_p) + bytes([_cs(sc_p)]))
+        s.flush()
+        time.sleep(0.2)
+        r = s.read(128)
+        if not (r and 0xC1 in r):
+            try:
+                s.close()
+            except Exception:
+                pass
+            raise RuntimeError(f"StartCommunication failed: {r.hex() if r else '(empty)'}")
+        self._s = s
+
+    # Commands that are pulse-only (no hold) — fire once, no note_off needed
+    PULSE_CMDS = {"lock", "unlock", "trunk", "chirp"}
+
+    def note_on(self, cmd_id: str, hold: bool = False):
+        if cmd_id not in LIDS:
+            return
+        lid, iocp, _, _ = LIDS[cmd_id]
+        if cmd_id in self.PULSE_CMDS:
+            self._q.put(("on", lid, iocp))
+        else:
+            self._q.put(("on", lid, 0x0F))
+
+    def note_off(self, cmd_id: str):
+        if cmd_id not in LIDS:
+            return
+        lid, _, _, _ = LIDS[cmd_id]
+        self._q.put(("off", lid, None))
+
+    def all_off(self):
+        self._q.put(("all_off", None, None))
+
+    def get_active(self) -> set[str]:
+        lid_to_name = {v[0]: k for k, v in LIDS.items()}
+        return {lid_to_name[lid] for lid in self._active_lids if lid in lid_to_name}
+
+    def _raw_fire(self, lid: int, iocp: int = 0x0F):
+        p = list(_IO_CONTROL_TEMPLATE)
+        p[5] = lid
+        p[6] = iocp
+        self._s.reset_input_buffer()
+        self._s.write(bytes(p) + bytes([_cs(p)]))
+        self._s.flush()
+        time.sleep(0.015)
+        self._s.reset_input_buffer()
+
+    def _raw_stop_diag(self):
+        self._s.reset_input_buffer()
+        self._s.write(bytes(_STOP_DIAG) + bytes([_cs(_STOP_DIAG)]))
+        self._s.flush()
+        time.sleep(0.015)
+        self._s.reset_input_buffer()
+
+    def _refire_active(self):
+        for lid in self._active_lids:
+            self._raw_fire(lid)
+
+    # TL+TR → HZ auto-merge (same K-Line optimization as scene editor)
+    _LID_TL = 0x0A
+    _LID_TR = 0x0B
+    _LID_HZ = 0x08
+
+    def _merge_tl_tr_on(self, lid: int) -> bool:
+        """If pressing TL while TR active (or vice versa), merge to HZ."""
+        other = self._LID_TR if lid == self._LID_TL else self._LID_TL
+        if lid in (self._LID_TL, self._LID_TR) and other in self._active_lids:
+            self._active_lids.discard(other)
+            self._raw_stop_diag()
+            self._raw_fire(self._LID_HZ)
+            self._active_lids.add(self._LID_HZ)
+            if self._active_lids - {self._LID_HZ}:
+                self._refire_active()
+            return True
+        return False
+
+    def _split_hz_off(self, lid: int) -> bool:
+        """If releasing TL/TR while HZ is active, split to the remaining side."""
+        if lid in (self._LID_TL, self._LID_TR) and self._LID_HZ in self._active_lids:
+            remaining = self._LID_TR if lid == self._LID_TL else self._LID_TL
+            self._active_lids.discard(self._LID_HZ)
+            self._raw_stop_diag()
+            self._active_lids.add(remaining)
+            self._refire_active()
+            return True
+        return False
+
+    def _drain_queue(self):
+        """Drain all pending messages from queue without blocking."""
+        msgs = []
+        while True:
+            try:
+                msgs.append(self._q.get_nowait())
+            except queue.Empty:
+                break
+        return msgs
+
+    def _process_batch(self, batch):
+        """Process a batch of messages, firing simultaneous note_ons together."""
+        # Separate into on/off/other for batching
+        fire_lids = []
+        for action, lid, iocp in batch:
+            if action == "quit":
+                self._running = False
+                return
+            elif action == "on":
+                is_pulse = iocp == 0x01
+                if is_pulse:
+                    self._raw_fire(lid, iocp)
+                elif self._merge_tl_tr_on(lid):
+                    pass
+                elif lid not in self._active_lids:
+                    fire_lids.append((lid, iocp))
+            elif action == "off":
+                # Process pending offs after all ons
+                pass
+            elif action == "all_off":
+                self._raw_stop_diag()
+                self._active_lids.clear()
+                fire_lids.clear()
+
+        # Batch-fire all new lids with minimal cmd_delay
+        for lid, iocp in fire_lids:
+            self._raw_fire(lid, iocp)
+            self._active_lids.add(lid)
+
+        # Process offs after ons (so simultaneous on+off of different lids works)
+        for action, lid, _ in batch:
+            if action == "off":
+                if self._split_hz_off(lid):
+                    pass
+                elif lid in self._active_lids:
+                    self._active_lids.discard(lid)
+                    self._raw_stop_diag()
+                    if self._active_lids:
+                        self._refire_active()
+
+    def _worker(self):
+        last_keepalive = time.time()
+        while self._running:
+            try:
+                first = self._q.get(timeout=0.5)
+            except queue.Empty:
+                if self._active_lids and time.time() - last_keepalive > 2.0:
+                    self._refire_active()
+                    last_keepalive = time.time()
+                continue
+
+            # Batch: grab everything else waiting in the queue
+            batch = [first] + self._drain_queue()
+            self._process_batch(batch)
+            last_keepalive = time.time()
+
+
+_session: LiveSession | None = None
+_session_lock = threading.Lock()
+
+
+def get_session() -> LiveSession | None:
+    return _session
+
+
+def start_session() -> LiveSession:
+    global _session
+    with _session_lock:
+        if _session and _session._running:
+            return _session
+        s = LiveSession()
+        s.start()
+        _session = s
+        return s
+
+
+def stop_session():
+    global _session
+    with _session_lock:
+        if _session:
+            _session.stop()
+            _session = None

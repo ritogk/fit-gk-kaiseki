@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .control import router as control_router
 from .fun import router as fun_router
+from .live import router as live_router
 
 app = FastAPI(
     title="Fit GK Kaiseki",
@@ -28,6 +29,7 @@ app.add_middleware(
 
 app.include_router(control_router)
 app.include_router(fun_router)
+app.include_router(live_router)
 
 
 @app.get("/api/health")

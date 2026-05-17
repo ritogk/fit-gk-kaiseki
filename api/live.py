@@ -1,0 +1,60 @@
+"""WebSocket endpoint for live performance mode.
+
+Maintains a persistent K-Line session and translates JSON messages
+to note_on/note_off commands with minimal latency.
+"""
+import json
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from kline.live import start_session, stop_session, get_session
+
+router = APIRouter(prefix="/api/live", tags=["live"])
+
+
+@router.websocket("/ws")
+async def live_ws(ws: WebSocket):
+    await ws.accept()
+    session = None
+    try:
+        session = start_session()
+        await ws.send_json({"type": "ready"})
+    except RuntimeError as e:
+        await ws.send_json({"type": "error", "message": str(e)})
+        await ws.close()
+        return
+
+    try:
+        while True:
+            raw = await ws.receive_text()
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+
+            msg_type = msg.get("type")
+            cmd_id = msg.get("id", "")
+
+            if msg_type == "note_on":
+                session.note_on(cmd_id)
+            elif msg_type == "note_off":
+                session.note_off(cmd_id)
+            elif msg_type == "all_off":
+                session.all_off()
+            elif msg_type == "ping":
+                await ws.send_json({"type": "pong"})
+                continue
+            else:
+                continue
+
+            await ws.send_json({
+                "type": "state",
+                "active": list(session.get_active()),
+            })
+
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        stop_session()
