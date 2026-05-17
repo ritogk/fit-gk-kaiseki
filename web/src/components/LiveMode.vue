@@ -322,7 +322,7 @@ onUnmounted(() => {
                 :class="isActive(pad.id) ? 'text-slate-900' : 'text-slate-300'">
             {{ pad.label }}
           </span>
-          <span class="text-xs mt-1 opacity-60 uppercase">{{ pad.key }}</span>
+          <span class="text-xs mt-1 opacity-60 uppercase">{{ pad.key === ' ' ? 'SPACE' : pad.key }}</span>
         </button>
 
         <!-- Horn -->
