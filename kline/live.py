@@ -165,6 +165,13 @@ class LiveSession:
         for lid in self._active_lids:
             self._raw_fire(lid)
 
+    def _stop_and_refire(self):
+        self._raw_stop_diag()
+        if self._active_lids:
+            time.sleep(0.005)
+            self._s.reset_input_buffer()
+            self._refire_active()
+
     # TL+TR → HZ auto-merge (same K-Line optimization as scene editor)
     _LID_TL = 0x0A
     _LID_TR = 0x0B
@@ -175,11 +182,8 @@ class LiveSession:
         other = self._LID_TR if lid == self._LID_TL else self._LID_TL
         if lid in (self._LID_TL, self._LID_TR) and other in self._active_lids:
             self._active_lids.discard(other)
-            self._raw_stop_diag()
-            self._raw_fire(self._LID_HZ)
             self._active_lids.add(self._LID_HZ)
-            if self._active_lids - {self._LID_HZ}:
-                self._refire_active()
+            self._stop_and_refire()
             return True
         return False
 
@@ -188,9 +192,8 @@ class LiveSession:
         if lid in (self._LID_TL, self._LID_TR) and self._LID_HZ in self._active_lids:
             remaining = self._LID_TR if lid == self._LID_TL else self._LID_TL
             self._active_lids.discard(self._LID_HZ)
-            self._raw_stop_diag()
             self._active_lids.add(remaining)
-            self._refire_active()
+            self._stop_and_refire()
             return True
         return False
 
@@ -240,9 +243,7 @@ class LiveSession:
                     pass
                 elif lid in self._active_lids:
                     self._active_lids.discard(lid)
-                    self._raw_stop_diag()
-                    if self._active_lids:
-                        self._refire_active()
+                    self._stop_and_refire()
 
     _KEEPALIVE_S = 3.0
 
