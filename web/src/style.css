@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+}
+
+.card {
+  @apply bg-white rounded-lg shadow-sm p-4 border border-slate-200;
+}
+
+.btn {
+  @apply px-3 py-2 rounded-md font-medium transition-all cursor-pointer border-0;
+}
+.btn:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+.btn-primary {
+  @apply bg-blue-600 text-white;
+}
+.btn-primary:not(:disabled):hover {
+  @apply bg-blue-700;
+}
+.btn-danger {
+  @apply bg-red-600 text-white;
+}
+.btn-danger:not(:disabled):hover {
+  @apply bg-red-700;
+}
+.btn-ghost {
+  @apply bg-slate-200 text-slate-800;
+}
+.btn-ghost:not(:disabled):hover {
+  @apply bg-slate-300;
+}
+
+.input {
+  @apply px-2 py-1 border border-slate-300 rounded w-24;
+}
+
+/* Car face lights */
+.light {
+  @apply w-9 h-9 rounded-full flex items-center justify-center select-none transition-all;
+  border: 2px solid #475569;
+  background: #1e293b;
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: #64748b;
+}
+.light.on {
+  background: #fbbf24;
+  border-color: #f59e0b;
+  box-shadow: 0 0 12px #fbbf2480;
+  color: #78350f;
+}
+.light.interactive {
+  @apply cursor-pointer;
+}
+.light.interactive:hover {
+  border-color: #94a3b8;
+}
+
+.light-mini {
+  @apply w-2 h-2 rounded-full;
+  background: #334155;
+}
+.light-mini.on {
+  background: #fbbf24;
+  box-shadow: 0 0 4px #fbbf2480;
+}
+
+.scene-card {
+  @apply rounded-md cursor-pointer shrink-0;
+  min-width: 3rem;
+  padding: 0.25rem 0.375rem;
+  border: 2px solid #e2e8f0;
+  background: #f8fafc;
+}
+.scene-card:hover {
+  border-color: #94a3b8;
+}
+.scene-card.selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
