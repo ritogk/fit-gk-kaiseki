@@ -103,6 +103,7 @@ def fun_sequence(
     on_tr: float = 0.15,
     gap: float = 0.025,
     cmd_delay: float = 0.020,
+    beats: str = "",
 ):
     """Custom step sequence — e.g. '[1,2],[3,4],5' fires groups simultaneously."""
     try:
@@ -111,11 +112,17 @@ def fun_sequence(
         raise HTTPException(400, f"invalid positions string: {positions!r}")
     if not steps:
         raise HTTPException(400, "positions cannot be empty")
+    beats_list = None
+    if beats:
+        try:
+            beats_list = [float(b) for b in beats.split(",") if b.strip()]
+        except ValueError:
+            raise HTTPException(400, f"invalid beats string: {beats!r}")
     return _start("sequence", patterns.play_sequence,
                   steps=steps, cycles=cycles, speed=speed,
                   on_hz=on_hz, on_hb=on_hb, on_lb=on_lb, on_ps=on_ps, on_fg=on_fg,
                   on_tl=on_tl, on_tr=on_tr, gap=gap,
-                  cmd_delay=cmd_delay)
+                  cmd_delay=cmd_delay, beats=beats_list)
 
 
 @router.post("/pattern")

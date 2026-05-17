@@ -6,26 +6,46 @@ import type { Scene } from '../types'
 const STORAGE_KEY = 'gk-scenes'
 
 const positions = defineModel<string>('positions', { default: '1,2,3' })
+const beatsModel = defineModel<string>('beats', { default: '' })
 const props = defineProps<{ speed: number }>()
 
 // --- Scene state ---
 
-function load(): Scene[] {
+interface StoredData {
+  scenes: Scene[]
+  beats: number[]
+}
+
+function load(): StoredData {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       const parsed = JSON.parse(saved)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      if (Array.isArray(parsed)) {
+        return { scenes: parsed, beats: parsed.map(() => 1) }
+      }
+      if (parsed.scenes && Array.isArray(parsed.scenes)) {
+        const beats = parsed.beats ?? parsed.scenes.map(() => 1)
+        return { scenes: parsed.scenes, beats }
+      }
     }
   } catch { /* ignore */ }
-  return [[1], [2], [3]]
+  return { scenes: [[1], [2], [3]], beats: [1, 1, 1] }
 }
 
-const scenes = ref<Scene[]>(load())
+const stored = load()
+const scenes = ref<Scene[]>(stored.scenes)
+const beats = ref<number[]>(stored.beats)
 const selected = ref(0)
 
+function ensureBeatsLength() {
+  while (beats.value.length < scenes.value.length) beats.value.push(1)
+  if (beats.value.length > scenes.value.length) beats.value.length = scenes.value.length
+}
+
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes.value))
+  ensureBeatsLength()
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ scenes: scenes.value, beats: beats.value }))
 }
 
 function scenesToPositions(s: Scene[]): string {
@@ -39,13 +59,27 @@ function scenesToPositions(s: Scene[]): string {
     .join(',')
 }
 
-// Sync scenes → positions
+// Sync scenes → positions & beats
 const positionsComputed = computed(() => scenesToPositions(scenes.value))
 watch(positionsComputed, (val) => { positions.value = val }, { immediate: true })
+
+const beatsComputed = computed(() => beats.value.join(','))
+watch(beatsComputed, (val) => {
+  beatsModel.value = beats.value.every((b) => b === 1) ? '' : val
+}, { immediate: true })
 
 // --- Actions ---
 
 const currentLights = computed(() => scenes.value[selected.value] ?? [])
+
+const BEAT_OPTIONS = [0.5, 1, 1.5, 2, 3, 4]
+
+function cycleBeat(i: number) {
+  const cur = beats.value[i] ?? 1
+  const idx = BEAT_OPTIONS.indexOf(cur)
+  beats.value[i] = BEAT_OPTIONS[(idx + 1) % BEAT_OPTIONS.length]
+  save()
+}
 
 function toggleLight(pos: number) {
   const scene = scenes.value[selected.value]
@@ -81,25 +115,29 @@ function toggleLight(pos: number) {
 
 function addScene() {
   scenes.value.push([])
+  beats.value.push(1)
   selected.value = scenes.value.length - 1
   save()
 }
 
 function removeScene(i: number) {
   scenes.value.splice(i, 1)
-  if (scenes.value.length === 0) scenes.value.push([])
+  beats.value.splice(i, 1)
+  if (scenes.value.length === 0) { scenes.value.push([]); beats.value.push(1) }
   if (selected.value >= scenes.value.length) selected.value = scenes.value.length - 1
   save()
 }
 
 function duplicateScene(i: number) {
   scenes.value.splice(i + 1, 0, [...scenes.value[i]])
+  beats.value.splice(i + 1, 0, beats.value[i])
   selected.value = i + 1
   save()
 }
 
-function loadPreset(preset: Scene[]) {
+function loadPreset(preset: Scene[], presetBeats?: number[]) {
   scenes.value = preset.map((s) => [...s])
+  beats.value = presetBeats ? [...presetBeats] : preset.map(() => 1)
   selected.value = 0
   save()
 }
@@ -107,40 +145,45 @@ function loadPreset(preset: Scene[]) {
 // --- Preview playback ---
 
 const playing = ref(false)
-let previewTimer: ReturnType<typeof setInterval> | null = null
+let previewTimeout: ReturnType<typeof setTimeout> | null = null
 
-const previewInterval = computed(() => Math.round(250 / props.speed))
+const baseInterval = computed(() => Math.round(250 / props.speed))
+
+function scheduleNext() {
+  const beat = beats.value[selected.value] ?? 1
+  previewTimeout = setTimeout(() => {
+    selected.value = (selected.value + 1) % scenes.value.length
+    if (playing.value) scheduleNext()
+  }, baseInterval.value * beat)
+}
 
 function startPreview() {
   stopPreview()
   playing.value = true
   selected.value = 0
-  previewTimer = setInterval(() => {
-    selected.value = (selected.value + 1) % scenes.value.length
-  }, previewInterval.value)
+  scheduleNext()
 }
 
 function stopPreview() {
   playing.value = false
-  if (previewTimer) { clearInterval(previewTimer); previewTimer = null }
+  if (previewTimeout) { clearTimeout(previewTimeout); previewTimeout = null }
 }
 
-watch(previewInterval, () => { if (playing.value) startPreview() })
+watch(baseInterval, () => { if (playing.value) { stopPreview(); startPreview() } })
 onUnmounted(() => stopPreview())
 
 defineExpose({ playing, startPreview, stopPreview })
 
 // --- Preset generation ---
 
-type Preset = { label: string; scenes: Scene[] }
+type Preset = { label: string; scenes: Scene[]; beats?: number[] }
 
-// Light groups for generation
 const ALL = [1, 2, 3, 4, 5, 6, 7] as const
-const LEFT_TO_RIGHT = [6, 3, 2, 7] as const   // TL → LB → HB → TR (横方向)
-const UPPER = [6, 3, 2, 7] as const            // 上段
-const LOWER = [4, 5] as const                  // 下段
-const LEFT_SIDE = [6, 3, 4] as const           // 左半分
-const RIGHT_SIDE = [7, 2, 5] as const          // 右半分
+const LEFT_TO_RIGHT = [6, 3, 2, 7] as const
+const UPPER = [6, 3, 2, 7] as const
+const LOWER = [4, 5] as const
+const LEFT_SIDE = [6, 3, 4] as const
+const RIGHT_SIDE = [7, 2, 5] as const
 
 function generateSweep(lights: readonly number[]): Scene[] {
   return lights.map((l) => [l])
@@ -178,9 +221,10 @@ function generatePingPong(lights: readonly number[]): Scene[] {
   return [...forward, ...back]
 }
 
-function generateRandom(): Scene[] {
+function generateRandom(): { scenes: Scene[]; beats: number[] } {
   const count = 3 + Math.floor(Math.random() * 5)
   const scenes: Scene[] = []
+  const b: number[] = []
   for (let i = 0; i < count; i++) {
     const scene: number[] = []
     for (const pos of ALL) {
@@ -191,46 +235,47 @@ function generateRandom(): Scene[] {
       scene.splice(scene.indexOf(7), 1)
       scene.push(1)
     }
-    if (scene.length > 0) scenes.push(scene.sort((a, b) => a - b))
+    if (scene.length > 0) {
+      scenes.push(scene.sort((a, c) => a - c))
+      b.push(BEAT_OPTIONS[Math.floor(Math.random() * BEAT_OPTIONS.length)])
+    }
   }
-  return scenes.length > 0 ? scenes : [[1]]
+  return { scenes: scenes.length > 0 ? scenes : [[1]], beats: b.length > 0 ? b : [1] }
 }
 
-const HAND_PICKED: Preset[] = [
+const PRESETS: Preset[] = [
+  // hand-picked
   { label: 'chase HZ,HB,LB', scenes: [[1], [2], [3]] },
   { label: 'HZ→HB+FG→LB+PS', scenes: [[1], [2, 5], [3, 4]] },
   { label: '全同時', scenes: [[1, 2, 3, 4, 5, 6, 7]] },
-  { label: 'ハートビート', scenes: [[1, 2, 3], [], [1, 2, 3], []] },
+  // generated
+  { label: '横sweep', scenes: generateSweep(LEFT_TO_RIGHT) },
+  { label: '横wave', scenes: generateWave(LEFT_TO_RIGHT) },
+  { label: '横slide2', scenes: generateSlide(LEFT_TO_RIGHT, 2) },
+  { label: '横ping pong', scenes: generatePingPong(LEFT_TO_RIGHT) },
+  { label: '横ビルドアップ', scenes: generateBuildUp(LEFT_TO_RIGHT) },
+  { label: '上下交互', scenes: generateAlternate(UPPER, LOWER) },
+  { label: '左右交互', scenes: generateAlternate(LEFT_SIDE, RIGHT_SIDE) },
+  { label: 'TL→TR交互', scenes: [[6], [7]] },
+  { label: '外→内', scenes: generateSweep([7, 5, 4, 6, 3, 2]) },
+  { label: '全ビルドアップ', scenes: generateBuildUp(ALL) },
+  { label: '点滅交互', scenes: generateAlternate([6, 2, 4], [7, 3, 5]) },
+  { label: '開閉', scenes: [[6, 7], [3, 4, 5], [2], [3, 4, 5], [6, 7]] },
+  // rhythm presets
+  { label: '4つ打ち HZ', scenes: [[1], [], [1], []], beats: [1, 1, 1, 1] },
+  { label: 'スイング LR', scenes: [[6], [7], [6], [7]], beats: [1.5, 0.5, 1.5, 0.5] },
+  { label: 'シャッフル', scenes: [[1], [2], [3], [2]], beats: [2, 1, 2, 1] },
+  { label: 'ハートビート', scenes: [[1, 2, 3], [], [1, 2, 3], []], beats: [0.5, 0.5, 0.5, 3] },
+  { label: 'ドンタタ', scenes: [[1, 2, 3], [6], [7], [1, 2, 3], [6], [7]], beats: [2, 0.5, 0.5, 2, 0.5, 0.5] },
+  { label: 'ブレイク', scenes: [[1, 2, 3, 4, 5], [], [6], [7], [6, 7], []], beats: [2, 1, 0.5, 0.5, 2, 2] },
+  { label: 'サンバ', scenes: [[1], [], [6], [1], [], [7]], beats: [1, 0.5, 0.5, 1, 0.5, 0.5] },
+  { label: 'マーチ', scenes: [[1, 3], [2, 4, 5], [1, 3]], beats: [1, 1, 2] },
+  { label: 'ワルツ', scenes: [[1, 2, 3], [6], [7]], beats: [2, 1, 1] },
 ]
 
-function generateAll(): Preset[] {
-  return [
-    ...HAND_PICKED,
-    { label: '横sweep', scenes: generateSweep(LEFT_TO_RIGHT) },
-    { label: '横wave', scenes: generateWave(LEFT_TO_RIGHT) },
-    { label: '横slide2', scenes: generateSlide(LEFT_TO_RIGHT, 2) },
-    { label: '横slide3', scenes: generateSlide(LEFT_TO_RIGHT, 3) },
-    { label: '横ping pong', scenes: generatePingPong(LEFT_TO_RIGHT) },
-    { label: '横ビルドアップ', scenes: generateBuildUp(LEFT_TO_RIGHT) },
-    { label: '横ティアダウン', scenes: generateTearDown(LEFT_TO_RIGHT) },
-    { label: '上下交互', scenes: generateAlternate(UPPER, LOWER) },
-    { label: '左右交互', scenes: generateAlternate(LEFT_SIDE, RIGHT_SIDE) },
-    { label: 'TL→TR交互', scenes: [[6], [7]] },
-    { label: 'TL+LB→TR+HB', scenes: [[6, 3], [7, 2]] },
-    { label: '外→内', scenes: generateSweep([6, 3, 2, 4, 5, 7].reverse()) },
-    { label: '内→外', scenes: generateSweep([2, 3, 6, 7, 4, 5]) },
-    { label: '全ビルドアップ', scenes: generateBuildUp(ALL) },
-    { label: '全ティアダウン', scenes: generateTearDown(ALL) },
-    { label: '開閉', scenes: [[6, 7], [3, 4, 5], [2], [3, 4, 5], [6, 7]] },
-    { label: '点滅交互', scenes: generateAlternate([6, 2, 4], [7, 3, 5]) },
-  ]
-}
-
-const PRESETS = ref(generateAll())
-
 function regenerateRandom() {
-  const random: Preset = { label: 'ランダム', scenes: generateRandom() }
-  loadPreset(random.scenes)
+  const r = generateRandom()
+  loadPreset(r.scenes, r.beats)
 }
 </script>
 
@@ -248,7 +293,13 @@ function regenerateRandom() {
                   @click.stop="removeScene(i)" title="削除">&times;</button>
         </div>
       </div>
-      <span v-if="i < scenes.length - 1" class="text-slate-300 shrink-0">&rarr;</span>
+      <button class="shrink-0 font-mono rounded px-1 hover:bg-blue-100 transition-colors"
+              :class="beats[i] !== 1 ? 'text-blue-600 bg-blue-50 font-semibold' : 'text-slate-400'"
+              style="font-size:0.65rem"
+              @click.stop="cycleBeat(i)"
+              :title="'シーン後の待ち時間倍率 (クリックで変更)'">
+        {{ beats[i] }}x {{ i < scenes.length - 1 ? '→' : '↩' }}
+      </button>
     </template>
     <button class="btn btn-ghost text-sm shrink-0 py-2" @click="addScene">+</button>
   </div>
@@ -264,7 +315,7 @@ function regenerateRandom() {
         <span class="text-xs text-slate-600 leading-6">プリセット:</span>
         <button v-for="p in PRESETS" :key="p.label"
                 class="btn btn-ghost text-xs"
-                @click="loadPreset(p.scenes)">
+                @click="loadPreset(p.scenes, p.beats)">
           {{ p.label }}
         </button>
         <button class="btn btn-primary text-xs" @click="regenerateRandom">

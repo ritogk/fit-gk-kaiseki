@@ -182,7 +182,7 @@ FG = 0x20  # fog
 SEQUENCE_LIDS = {1: HZ, 2: HB, 3: LB, 4: PS, 5: FG, 6: TL, 7: TR}
 
 
-def play_sequence(steps=None, cycles=80, on_hz=0.15, on_hb=0.05, on_lb=0.05, on_ps=0.05, on_fg=0.05, on_tl=0.15, on_tr=0.15, gap=0.025, speed=1.4, cmd_delay=0.020):
+def play_sequence(steps=None, cycles=80, on_hz=0.15, on_hb=0.05, on_lb=0.05, on_ps=0.05, on_fg=0.05, on_tl=0.15, on_tr=0.15, gap=0.025, speed=1.4, cmd_delay=0.020, beats=None):
     """Run a custom step sequence where 1=HZ, 2=HB, 3=LB, 4=PS, 5=FG.
 
     Each step is a list of position numbers to fire simultaneously.
@@ -214,7 +214,7 @@ def play_sequence(steps=None, cycles=80, on_hz=0.15, on_hb=0.05, on_lb=0.05, on_
         for _ in range(cycles):
             if _cancel.is_set():
                 break
-            for step in steps:
+            for si, step in enumerate(steps):
                 if _cancel.is_set():
                     break
                 lids = [SEQUENCE_LIDS[p] for p in step if p in SEQUENCE_LIDS]
@@ -228,7 +228,8 @@ def play_sequence(steps=None, cycles=80, on_hz=0.15, on_hb=0.05, on_lb=0.05, on_
                     time.sleep(cmd_delay)
                     s.reset_input_buffer()
                 on_s = max(on_for.get(pos, 0.05) for pos in step if pos in SEQUENCE_LIDS)
-                time.sleep(on_s)
+                beat = beats[si % len(beats)] if beats else 1.0
+                time.sleep(on_s * beat)
                 p2 = [0x80, 0x10, 0xF0, 0x01, 0x20]
                 s.reset_input_buffer()
                 s.write(bytes(p2) + bytes([_cs(p2)]))

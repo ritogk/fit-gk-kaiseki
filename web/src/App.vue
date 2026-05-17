@@ -14,7 +14,7 @@ const health = reactive({ ok: false })
 const commands = ref<CommandMap | null>(null)
 const durations = reactive<Record<string, number>>({})
 const fun = reactive({ bpm: 120, measures: 8 })
-const seq = reactive({ positions: '1,2,3', cycles: 80, speed: 1.4, cmd_delay: 0.020 })
+const seq = reactive({ positions: '1,2,3', beats: '', cycles: 80, speed: 1.4, cmd_delay: 0.020 })
 const custom = reactive({ lid: '1D', iocp: '0F', on_s: 0.1, off_s: 0.1, cycles: 10 })
 const status = reactive({ running: false, kind: null as string | null })
 const busy = ref(false)
@@ -61,12 +61,14 @@ function onHornClick() {
 
 async function startSequence() {
   busy.value = true
-  const data = await apiCall('POST', '/api/fun/sequence', {
+  const params: Record<string, unknown> = {
     positions: seq.positions,
     cycles: seq.cycles,
     speed: seq.speed,
     cmd_delay: seq.cmd_delay,
-  })
+  }
+  if (seq.beats) params.beats = seq.beats
+  const data = await apiCall('POST', '/api/fun/sequence', params)
   if (data) status.running = true
   busy.value = false
 }
@@ -152,7 +154,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
       <section class="card">
         <h2 class="text-lg font-bold mb-3">シーンエディター</h2>
 
-        <SceneEditor ref="sceneEditor" v-model:positions="seq.positions" :speed="seq.speed" />
+        <SceneEditor ref="sceneEditor" v-model:positions="seq.positions" v-model:beats="seq.beats" :speed="seq.speed" />
 
         <div class="flex flex-wrap items-end gap-3">
           <label class="text-sm">
