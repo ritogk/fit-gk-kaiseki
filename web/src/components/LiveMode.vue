@@ -185,7 +185,7 @@ const CMD_TO_POS: Record<string, number> = {
 }
 
 const monitorLights = computed(() => {
-  const ids = new Set([...active.value, ...pressedPads.value])
+  const ids = new Set([...pressedPads.value])
   for (const id of loopPads.value) {
     if (loopPhase.value) ids.add(id)
   }
