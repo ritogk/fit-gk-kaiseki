@@ -4,6 +4,17 @@
 
 自分の車両 + 私的環境での研究目的限定です。 公道で勝手に光らせたりホーンを鳴らしたりはしないでください。 Honda とも当然無関係。
 
+## スクリーンショット
+
+### シーンエディター (通常モード)
+![通常モード](docs/screenshots/normal-mode.png)
+
+### ダークモード
+![ダークモード](docs/screenshots/normal-mode-dark.png)
+
+### ライブ演奏モード
+![ライブモード](docs/screenshots/live-mode.png)
+
 ## できたこと
 
 ECM(0x10) に対して以下を IO Control で叩けるところまで判明:
@@ -99,12 +110,12 @@ K-Line (10400bps, 半二重) はシリアル通信なので物理的に同時送
 ## 構成
 
 ```
-kline/      K-Line client (ISO 14230 / KWP2000)
-api/        FastAPI ルーター
-web/        Vue 3 + Tailwind の単一HTML
+kline/      K-Line client (ISO 14230 / KWP2000) + ライブセッション
+api/        FastAPI ルーター + WebSocket (ライブモード)
+web/        Vue 3 + TypeScript + Vite SPA (Tailwind CSS v4)
 scripts/    CLI ラッパー
 research/   解析中の生スクリプト (失敗込み)
-docs/       findings.md
+docs/       findings.md + スクリーンショット
 ```
 
 ## ライセンス
