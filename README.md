@@ -6,11 +6,8 @@
 
 ## スクリーンショット
 
-### シーンエディター (通常モード)
-![通常モード](docs/screenshots/normal-mode.png)
-
-### ダークモード
-![ダークモード](docs/screenshots/normal-mode-dark.png)
+### シーンエディター
+![シーンエディター](docs/screenshots/normal-mode-dark.png)
 
 ### ライブ演奏モード
 ![ライブモード](docs/screenshots/live-mode.png)
