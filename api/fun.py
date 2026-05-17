@@ -76,26 +76,43 @@ def fun_chase(
                   hz_on=hz_on, hb_on=hb_on, lb_on=lb_on, gap=gap)
 
 
+def _parse_steps(raw: str):
+    """Parse step notation: '[1,2],[3,4],5' → [[1,2],[3,4],[5]]."""
+    import re
+    steps = []
+    for token in re.findall(r'\[[\d,\s]+\]|\d+', raw):
+        if token.startswith('['):
+            inner = token.strip('[]')
+            steps.append([int(x.strip()) for x in inner.split(',') if x.strip()])
+        else:
+            steps.append([int(token)])
+    return steps
+
+
 @router.post("/sequence")
 def fun_sequence(
     positions: str = "1,2,3",
-    cycles: int = 8,
+    cycles: int = 80,
     speed: float = 1.4,
     on_hz: float = 0.15,
     on_hb: float = 0.05,
     on_lb: float = 0.05,
+    on_ps: float = 0.05,
+    on_fg: float = 0.05,
     gap: float = 0.025,
+    cmd_delay: float = 0.020,
 ):
-    """Custom step sequence — comma-separated 1/2/3 (HZ/HB/LB)."""
+    """Custom step sequence — e.g. '[1,2],[3,4],5' fires groups simultaneously."""
     try:
-        pos_list = [int(p.strip()) for p in positions.split(",") if p.strip()]
+        steps = _parse_steps(positions)
     except ValueError:
         raise HTTPException(400, f"invalid positions string: {positions!r}")
-    if not pos_list:
+    if not steps:
         raise HTTPException(400, "positions cannot be empty")
     return _start("sequence", patterns.play_sequence,
-                  positions=pos_list, cycles=cycles, speed=speed,
-                  on_hz=on_hz, on_hb=on_hb, on_lb=on_lb, gap=gap)
+                  steps=steps, cycles=cycles, speed=speed,
+                  on_hz=on_hz, on_hb=on_hb, on_lb=on_lb, on_ps=on_ps, on_fg=on_fg, gap=gap,
+                  cmd_delay=cmd_delay)
 
 
 @router.post("/pattern")

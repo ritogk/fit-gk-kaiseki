@@ -57,6 +57,30 @@ sudo usermod -aG dialout $USER && newgrp dialout
 
 ブラウザで `http://127.0.0.1:8000/` 開けば UI、 `/docs` で Swagger。
 
+## 同時点灯の仕組み
+
+K-Line (10400bps, 半二重) はシリアル通信なので物理的に同時送信はできない。 代わりに以下の手順で「同時に見える」点灯を実現している:
+
+```
+例: [2,5] (HB + FG 同時点灯)
+
+1. io_control(HB) 送信 → ECMがHBを点灯
+2. sleep(cmd_delay)      → 応答がバスから消えるのを待つ
+3. reset_input_buffer()  → 応答バイトを読み捨て
+4. io_control(FG) 送信 → ECMがFGを点灯 (HBはまだ点いている)
+5. sleep(cmd_delay)      → 同上
+6. reset_input_buffer()
+7. on_s 待機             → 両方点灯中
+8. StopDiag 送信         → 全ライト一括消灯
+```
+
+ポイント:
+
+- io_control で点けたライトは StopDiag が来るまで消えない (ECMのenvelopeが維持する)
+- 応答を `s.read()` でパースせず `sleep` + `reset_input_buffer()` で捨てることで、 read のタイムアウト待ちを省略
+- `cmd_delay` (デフォルト 20ms) が1LIDあたりの間隔。 10400bps で コマンド14byte (~13ms) + 応答7byte (~7ms) = ~20ms が物理下限
+- 実測では 18ms 前後まで詰められるが、 それ以下だとバス衝突で一部ライトが不発になる
+
 ## CLI で叩きたい場合
 
 ```bash
