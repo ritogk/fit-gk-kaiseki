@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 
-from kline.client import KLineBusyError
+from kline.client import KLineClient, KLineBusyError
 from kline.commands import LIDS, fire, list_commands
 
 router = APIRouter(prefix="/api/control", tags=["control"])
@@ -17,6 +17,19 @@ router = APIRouter(prefix="/api/control", tags=["control"])
 def get_list():
     """Return all known commands and their LID/IOCP map."""
     return list_commands()
+
+
+@router.post("/stop_all")
+def post_stop_all():
+    """Send StopDiagSession to kill any active IO Control envelopes."""
+    try:
+        with KLineClient() as cli:
+            cli.stop_diag()
+    except KLineBusyError as e:
+        raise HTTPException(409, str(e))
+    except RuntimeError as e:
+        raise HTTPException(503, str(e))
+    return {"status": "ok"}
 
 
 @router.post("/{name}")

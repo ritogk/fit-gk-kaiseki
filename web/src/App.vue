@@ -11,7 +11,7 @@ const sceneEditor = ref<InstanceType<typeof SceneEditor> | null>(null)
 
 // --- Live mode ---
 
-const liveMode = ref(false)
+const liveMode = ref(true)
 
 // --- Dark mode ---
 
@@ -122,6 +122,10 @@ async function stopFun() {
   busy.value = false
 }
 
+async function emergencyStop() {
+  await apiCall('POST', '/api/control/stop_all')
+}
+
 async function checkHealth() {
   try {
     const r = await fetch('/api/health')
@@ -178,6 +182,9 @@ onUnmounted(() => stopStatusPolling())
           </span>
           <button class="btn btn-primary text-xs py-1 px-2" @click="liveMode = true">
             LIVE
+          </button>
+          <button class="btn text-xs py-1 px-2 bg-slate-500 text-white hover:bg-slate-600" @click="emergencyStop">
+            全停止
           </button>
           <button class="btn btn-ghost text-xs py-1 px-2" @click="toggleDark">
             {{ dark ? '☀️' : '🌙' }}

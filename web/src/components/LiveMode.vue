@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useWebSocket } from '../composables/useWebSocket'
+import { useApi } from '../composables/useApi'
 import CarFace from './CarFace.vue'
 
 const emit = defineEmits<{ exit: [] }>()
 
 const { connected, active, error, connect, disconnect, noteOn, noteOff, allOff, loopOn, loopOff, setBpm } = useWebSocket()
+const { apiCall } = useApi()
 
 // --- Pad definitions ---
 
@@ -18,13 +20,13 @@ interface Pad {
 }
 
 const LIGHT_PADS: Pad[] = [
-  { id: 'turn_left',  label: 'TL',  key: 'q', color: 'amber',  mode: 'hold' },
-  { id: 'low_beam',   label: 'LB',  key: 'w', color: 'yellow', mode: 'hold' },
-  { id: 'high_beam',  label: 'HB',  key: 'e', color: 'white',  mode: 'hold' },
-  { id: 'turn_right', label: 'TR',  key: 'r', color: 'amber',  mode: 'hold' },
-  { id: 'position',   label: 'PS',  key: 'a', color: 'orange', mode: 'hold' },
-  { id: 'fog',        label: 'FG',  key: 's', color: 'cyan',   mode: 'hold' },
-  { id: 'hazard',     label: 'HZ',  key: 'd', color: 'amber',  mode: 'hold' },
+  { id: 'turn_left',  label: 'TL',  key: 'q', color: 'amber', mode: 'hold' },
+  { id: 'low_beam',   label: 'LB',  key: 'w', color: 'amber', mode: 'hold' },
+  { id: 'high_beam',  label: 'HB',  key: 'e', color: 'amber', mode: 'hold' },
+  { id: 'turn_right', label: 'TR',  key: 'r', color: 'amber', mode: 'hold' },
+  { id: 'position',   label: 'PS',  key: 'a', color: 'amber', mode: 'hold' },
+  { id: 'fog',        label: 'FG',  key: 's', color: 'amber', mode: 'hold' },
+  { id: 'hazard',     label: 'HZ',  key: 'd', color: 'amber', mode: 'hold' },
 ]
 
 const ACTION_PADS: Pad[] = [
@@ -100,6 +102,11 @@ function handleAllOff() {
   pressedPads.value.clear()
   loopPads.value.clear()
   syncLoopTimer()
+}
+
+async function emergencyStop() {
+  handleAllOff()
+  await apiCall('POST', '/api/control/stop_all')
 }
 
 function handleExit() {
@@ -253,6 +260,10 @@ onUnmounted(() => {
         <button class="px-3 py-1 rounded text-xs bg-amber-600 hover:bg-amber-500"
                 @click="handleAllOff">
           ALL OFF
+        </button>
+        <button class="px-3 py-1 rounded text-xs bg-slate-500 hover:bg-slate-400"
+                @click="emergencyStop">
+          全停止
         </button>
         <button class="px-3 py-1 rounded text-xs bg-slate-600 hover:bg-slate-500"
                 @click="handleExit">
