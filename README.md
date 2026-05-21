@@ -115,6 +115,43 @@ docs/       findings.md + スクリーンショット
 ### ライブ演奏モード
 ![ライブモード](docs/screenshots/live-mode.png)
 
+## Launchpad X でライブ演奏（物理パッドコントローラー）
+
+Novation Launchpad X を USB 接続し、ライブモード用の物理キーボードとして使える。
+パッドを押すと対応するキーイベントが発火し、ブラウザのライブモードをそのまま操作できる。
+
+### 必要なもの
+
+- Novation Launchpad X（USB 接続）
+- ALSA 開発ライブラリ: `sudo apt install libasound2-dev`
+- root 権限（`/dev/uinput` へのアクセスに必要）
+
+### ビルド・起動
+
+```bash
+cd launchpad
+make
+sudo killall -9 launchpad-kb 2>/dev/null; sudo ./launchpad-kb -m keymap-live.conf
+```
+
+操作可能なパッドだけが光り、それ以外は暗くなる。押下時は白く光る。終了は `Ctrl+C`。
+
+### パッド配置（左下 3 行）
+
+```
+[Q]  [W]  [E]  [R]       ← ライト上段（橙）: 左ウィンカー / ロービーム / ハイビーム / 右ウィンカー
+[A]  [S]  [D]            ← ライト下段（黄）: 車幅灯 / フォグ / ハザード
+[Z]  [X]  [C]  [SPACE]   ← アクション（青）+ ホーン（赤）: ロック / アンロック / チャープ / ホーン
+```
+
+### トラブルシューティング
+
+- **"Device or resource busy"**: `sudo killall -9 launchpad-kb amidi` で前のプロセスを殺す
+- **LED が光らない**: Programmer モードでは `hw:X,0,1`（MIDI ポート）を使う。DAW ポート（`hw:X,0,0`）では LED は制御できない
+- **パッドを押しても反応しない**: `amidi -p hw:X,0,1 -d` で MIDI データが来ているか確認
+
+詳細は [launchpad/](launchpad/) 内のソースコードと `keymap-live.conf` を参照。
+
 ## ライセンス
 
 MIT。 [LICENSE](LICENSE) 参照。 自分の車で、 自分のリスクで遊んでください。

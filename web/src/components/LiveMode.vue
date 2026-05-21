@@ -48,8 +48,12 @@ function padDown(pad: Pad, e?: PointerEvent) {
   if (e) pointerToPad.set(e.pointerId, pad)
   if (pad.mode === 'pulse') {
     noteOn(pad.id)
-    pulsedPads.value.add(pad.id)
-    setTimeout(() => pulsedPads.value.delete(pad.id), 200)
+    if (e) {
+      pulsedPads.value.add(pad.id)
+      setTimeout(() => pulsedPads.value.delete(pad.id), 200)
+    } else {
+      pressedPads.value.add(pad.id)
+    }
   } else {
     if (!pressedPads.value.has(pad.id)) {
       pressedPads.value.add(pad.id)
@@ -59,9 +63,11 @@ function padDown(pad: Pad, e?: PointerEvent) {
 }
 
 function padUp(pad: Pad) {
-  if (pad.mode === 'hold' && pressedPads.value.has(pad.id)) {
+  if (pressedPads.value.has(pad.id)) {
     pressedPads.value.delete(pad.id)
-    noteOff(pad.id)
+    if (pad.mode === 'hold') {
+      noteOff(pad.id)
+    }
   }
 }
 
