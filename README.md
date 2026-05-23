@@ -45,6 +45,8 @@ python3 -m virtualenv .venv
 ./run.sh
 ```
 
+`run.sh` はポート 8000/5173 の既存プロセスを kill してから、API サーバー (uvicorn, port 8000) と Web フロントエンド (Vite, port 5173) を同時に起動する。
+
 シリアルポートのパーミッションが要る (`/dev/ttyUSB0`):
 
 ```bash
@@ -131,7 +133,9 @@ Novation Launchpad X を USB 接続し、ライブモード用の物理キーボ
 ```bash
 cd launchpad
 make
-sudo killall -9 launchpad-kb 2>/dev/null; sudo ./launchpad-kb -m keymap-live.conf
+./run.sh            # 起動（前のプロセスも自動で kill）
+./run.sh stop       # 停止
+./run.sh restart    # 再起動
 ```
 
 操作可能なパッドだけが光り、それ以外は暗くなる。押下時は白く光る。終了は `Ctrl+C`。
@@ -139,8 +143,8 @@ sudo killall -9 launchpad-kb 2>/dev/null; sudo ./launchpad-kb -m keymap-live.con
 ### パッド配置（左下 3 行）
 
 ```
-[Q]  [W]  [E]  [R]       ← ライト上段（橙）: 左ウィンカー / ロービーム / ハイビーム / 右ウィンカー
-[A]  [S]  [D]            ← ライト下段（黄）: 車幅灯 / フォグ / ハザード
+[Q]  [W]  [E]  [V]       ← ライト上段（橙）+ 全停止（赤）: ロービーム / ハイビーム / ハザード / 全停止
+[A]  [S]  [D]  [R]       ← ライト下段（黄）: 車幅灯 / フォグ / 左ウィンカー / 右ウィンカー
 [Z]  [X]  [C]  [SPACE]   ← アクション（青）+ ホーン（赤）: ロック / アンロック / チャープ / ホーン
 ```
 

@@ -20,13 +20,13 @@ interface Pad {
 }
 
 const LIGHT_PADS: Pad[] = [
-  { id: 'turn_left',  label: 'TL',  key: 'q', color: 'amber', mode: 'hold' },
-  { id: 'low_beam',   label: 'LB',  key: 'w', color: 'amber', mode: 'hold' },
-  { id: 'high_beam',  label: 'HB',  key: 'e', color: 'amber', mode: 'hold' },
-  { id: 'turn_right', label: 'TR',  key: 'r', color: 'amber', mode: 'hold' },
+  { id: 'low_beam',   label: 'LB',  key: 'q', color: 'amber', mode: 'hold' },
+  { id: 'high_beam',  label: 'HB',  key: 'w', color: 'amber', mode: 'hold' },
+  { id: 'hazard',     label: 'HZ',  key: 'e', color: 'amber', mode: 'hold' },
   { id: 'position',   label: 'PS',  key: 'a', color: 'amber', mode: 'hold' },
   { id: 'fog',        label: 'FG',  key: 's', color: 'amber', mode: 'hold' },
-  { id: 'hazard',     label: 'HZ',  key: 'd', color: 'amber', mode: 'hold' },
+  { id: 'turn_right', label: 'TL',  key: 'd', color: 'amber', mode: 'hold' },
+  { id: 'turn_left',  label: 'TR',  key: 'r', color: 'amber', mode: 'hold' },
 ]
 
 const ACTION_PADS: Pad[] = [
@@ -35,7 +35,7 @@ const ACTION_PADS: Pad[] = [
   { id: 'chirp',   label: 'CHIRP',  key: 'c', color: 'purple', mode: 'pulse' },
 ]
 
-const HORN_PAD: Pad = { id: 'horn', label: 'HORN', key: ' ', color: 'red', mode: 'hold' }
+const HORN_PAD: Pad = { id: 'horn', label: 'HORN', key: ' ', color: 'red', mode: 'pulse' }
 
 // --- Interaction ---
 
@@ -48,12 +48,8 @@ function padDown(pad: Pad, e?: PointerEvent) {
   if (e) pointerToPad.set(e.pointerId, pad)
   if (pad.mode === 'pulse') {
     noteOn(pad.id)
-    if (e) {
-      pulsedPads.value.add(pad.id)
-      setTimeout(() => pulsedPads.value.delete(pad.id), 200)
-    } else {
-      pressedPads.value.add(pad.id)
-    }
+    pulsedPads.value.add(pad.id)
+    setTimeout(() => pulsedPads.value.delete(pad.id), 10)
   } else {
     if (!pressedPads.value.has(pad.id)) {
       pressedPads.value.add(pad.id)
@@ -83,6 +79,7 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.repeat) return
   const key = e.key.toLowerCase()
   if (key === 'escape') { handleExit(); return }
+  if (key === 'v') { e.preventDefault(); handleAllOff(); return }
   if (pressedKeys.value.has(key)) return
   pressedKeys.value.add(key)
 
@@ -305,9 +302,10 @@ onUnmounted(() => {
 
       <!-- Lights -->
       <div class="flex-1 grid grid-cols-4 gap-3" style="grid-template-rows: 1fr 1fr">
-        <button v-for="pad in LIGHT_PADS" :key="pad.id"
+        <button v-for="(pad, i) in LIGHT_PADS" :key="pad.id"
                 :class="[padColorClass(pad), isActive(pad.id) ? 'shadow-lg scale-95' : '', loopPads.has(pad.id) ? 'ring-2 ring-amber-400' : '']"
                 class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75"
+                :style="{ order: i < 3 ? i : i + 1 }"
                 @pointerdown.prevent="padDown(pad, $event)">
           <span class="text-2xl sm:text-3xl font-bold"
                 :class="isActive(pad.id) ? 'text-slate-900' : 'text-slate-300'">
@@ -315,6 +313,13 @@ onUnmounted(() => {
           </span>
           <span v-if="loopPads.has(pad.id)" class="text-xs mt-0.5 text-amber-300 font-bold">LOOP</span>
           <span class="text-xs mt-1 opacity-60 uppercase">{{ pad.key === ' ' ? 'SPACE' : pad.key }}</span>
+        </button>
+        <!-- All Stop (右上) -->
+        <button class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75 bg-orange-700 hover:bg-orange-600 active:bg-orange-500 active:scale-95"
+                style="order: 3"
+                @pointerdown.prevent="handleAllOff">
+          <span class="text-2xl sm:text-3xl font-bold text-white">STOP</span>
+          <span class="text-xs mt-1 opacity-60">V</span>
         </button>
       </div>
 
@@ -346,7 +351,7 @@ onUnmounted(() => {
 
     <!-- Keyboard hint -->
     <div class="text-center text-xs text-slate-500 pb-2">
-      Q W E R / A S D = ライト | Z X C = アクション | SPACE = ホーン | ESC = 終了
+      Q W E R / A S D = ライト | Z X C = アクション | SPACE = ホーン | V = 全停止 | ESC = 終了
     </div>
   </div>
 </template>

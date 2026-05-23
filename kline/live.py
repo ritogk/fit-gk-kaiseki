@@ -98,7 +98,7 @@ class LiveSession:
         self._s = s
 
     # Commands that are pulse-only (no hold) — fire once, no note_off needed
-    PULSE_CMDS = {"lock", "unlock", "trunk", "chirp"}
+    PULSE_CMDS = {"lock", "unlock", "trunk", "chirp", "horn"}
 
     def note_on(self, cmd_id: str, hold: bool = False):
         if cmd_id not in LIDS:
@@ -216,6 +216,8 @@ class LiveSession:
                 return
             elif action == "pulse":
                 self._raw_fire(lid, iocp)
+                time.sleep(0.01)
+                self._stop_and_refire()
             elif action == "on":
                 if self._merge_tl_tr_on(lid):
                     pass
