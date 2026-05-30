@@ -288,11 +288,11 @@ static int load_keymap_file(const char *path) {
 
         if (type == 'N' || type == 'n') {
             note_to_key[num]      = kc;
-            note_led_idle[num]    = COLOR_ACTIVE;
+            note_led_idle[num]    = (n >= 4 && idle >= 0) ? idle : COLOR_ACTIVE;
             note_led_pressed[num] = (n >= 5 && pressed >= 0) ? pressed : COLOR_BRIGHT;
         } else if (type == 'C' || type == 'c') {
             cc_to_key[num]      = kc;
-            cc_led_idle[num]    = COLOR_ACTIVE;
+            cc_led_idle[num]    = (n >= 4 && idle >= 0) ? idle : COLOR_ACTIVE;
             cc_led_pressed[num] = (n >= 5 && pressed >= 0) ? pressed : COLOR_BRIGHT;
         }
     }
