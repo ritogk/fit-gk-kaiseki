@@ -10,3 +10,4 @@ __pycache__/
 .idea/
 .vscode/
 launchpad/launchpad-kb
+*.tsbuildinfo
