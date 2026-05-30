@@ -20,6 +20,7 @@ def _cs(d):
 _IO_CONTROL_TEMPLATE = [0x80, ECM, TESTER, 0x08, 0x30, 0x00, 0x0F, 0, 0, 0, 0, 0]
 _STOP_DIAG = [0x80, ECM, TESTER, 0x01, 0x20]
 _TESTER_PRESENT = [0x80, ECM, TESTER, 0x01, 0x3E]
+_TX_GAP = 0.05
 
 
 class LiveSession:
@@ -34,6 +35,7 @@ class LiveSession:
         self._bpm: float = 120.0
         self._running = False
         self._locked = False
+        self._last_tx = 0.0
 
     def start(self):
         if not _serial_lock.acquire(blocking=False):
@@ -138,35 +140,33 @@ class LiveSession:
         lid_to_name = {v[0]: k for k, v in LIDS.items()}
         return {lid_to_name[lid] for lid in self._active_lids if lid in lid_to_name}
 
-    def _read_response(self):
-        """Wait for the ECU's response before returning so the next command
-        cannot collide with it on the half-duplex K-Line bus (ISO 14230 P2).
+    def _pace(self):
+        """Ensure enough gap from the previous TX that the ECU's response has
+        cleared the half-duplex K-Line bus before we transmit again (ISO 14230
+        P2). Measured from the last TX, so an isolated command waits not at all
+        while only back-to-back frames (e.g. multi-light fire) get spaced out."""
+        wait = _TX_GAP - (time.time() - self._last_tx)
+        if wait > 0:
+            time.sleep(wait)
+        self._s.reset_input_buffer()
 
-        The serial port is opened with timeout=0.05s, so each read() blocks up
-        to ~P2max. We read until the bus goes idle (a read returns nothing),
-        which paces consecutive commands without a fixed blind sleep."""
-        self._s.read(128)
+    def _send(self, frame):
+        self._pace()
+        self._s.write(bytes(frame) + bytes([_cs(frame)]))
+        self._s.flush()
+        self._last_tx = time.time()
 
     def _raw_fire(self, lid: int, iocp: int = 0x0F):
         p = list(_IO_CONTROL_TEMPLATE)
         p[5] = lid
         p[6] = iocp
-        self._s.reset_input_buffer()
-        self._s.write(bytes(p) + bytes([_cs(p)]))
-        self._s.flush()
-        self._read_response()
+        self._send(p)
 
     def _raw_stop_diag(self):
-        self._s.reset_input_buffer()
-        self._s.write(bytes(_STOP_DIAG) + bytes([_cs(_STOP_DIAG)]))
-        self._s.flush()
-        self._read_response()
+        self._send(_STOP_DIAG)
 
     def _raw_tester_present(self):
-        self._s.reset_input_buffer()
-        self._s.write(bytes(_TESTER_PRESENT) + bytes([_cs(_TESTER_PRESENT)]))
-        self._s.flush()
-        self._read_response()
+        self._send(_TESTER_PRESENT)
 
     def _refire_active(self):
         for lid in self._active_lids:
