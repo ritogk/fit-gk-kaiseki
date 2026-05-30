@@ -18,8 +18,17 @@ LIDS = {
     "lock":        (0x04, 0x01, 0.0,  "Lock all doors (single pulse)"),
     "unlock":      (0x05, 0x01, 0.0,  "Unlock all doors (single pulse)"),
     "trunk":       (0x09, 0x01, 0.0,  "Open trunk (single pulse)"),
-    "chirp":       (0x11, 0x01, 0.0,  "Buzzer/chirp tone"),
-    "horn":        (0x26, 0x01, 1.0,  "Horn (envelope ~1s, can be shortened with StopDiag)"),
+    "chirp":       (0x11, 0x01, 0.0,  "Buzzer/chirp tone (single pulse)"),
+    "chirp_hold":  (0x11, 0x02, 15.0, "Buzzer/chirp sustained (StopDiag to stop)"),
+    "horn_short":  (0x26, 0x01, 0.0,  "Horn short pulse (minimal single fire)"),
+    "horn":        (0x26, 0x01, 1.0,  "Horn (hold mode, continuous while pressed)"),
+    "room_lamp":   (0x02, 0x1E, 15.0, "Room lamp (StopDiag to turn off)"),
+    "cargo_light": (0x12, 0x1E, 15.0, "Cargo area light (StopDiag to turn off)"),
+    "wiper_front_low": (0x19, 0x05, 15.0, "Front wiper low (StopDiag to stop)"),
+    "wiper_front_hi":  (0x1A, 0x05, 15.0, "Front wiper hi (StopDiag to stop)"),
+    "wiper_rear":      (0x0D, 0x05, 15.0, "Rear wiper (StopDiag to stop)"),
+    "washer_front":    (0x1B, 0x05, 15.0, "Front washer (StopDiag to stop)"),
+    "washer_rear":     (0x0E, 0x05, 15.0, "Rear washer (StopDiag to stop)"),
 }
 
 

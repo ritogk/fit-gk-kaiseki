@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Start the API server (with hot reload).
+# Start the API server (uvicorn:8000) + Web frontend (Vite:5173).
+# For the Launchpad keyboard bridge, use ./run-keyboard.sh instead.
 #
 # Requires read/write on the K-Line port (default /dev/ttyUSB0).
 # If the port is owned by root:dialout, the user must be in the dialout group

@@ -30,6 +30,7 @@ class LiveSession:
         self._q: queue.Queue = queue.Queue()
         self._thread: threading.Thread | None = None
         self._active_lids: set[int] = set()
+        self._lid_iocp: dict[int, int] = {}
         self._loop_lids: set[int] = set()
         self._bpm: float = 120.0
         self._running = False
@@ -65,6 +66,7 @@ class LiveSession:
                 pass
             self._s = None
         self._active_lids.clear()
+        self._lid_iocp.clear()
         self._release()
 
     def _release(self):
@@ -98,7 +100,7 @@ class LiveSession:
         self._s = s
 
     # Commands that are pulse-only (no hold) — fire once, no note_off needed
-    PULSE_CMDS = {"lock", "unlock", "trunk", "chirp", "horn"}
+    PULSE_CMDS = {"lock", "unlock", "trunk", "chirp", "horn_short"}
 
     def note_on(self, cmd_id: str, hold: bool = False):
         if cmd_id not in LIDS:
@@ -163,39 +165,11 @@ class LiveSession:
 
     def _refire_active(self):
         for lid in self._active_lids:
-            self._raw_fire(lid)
+            self._raw_fire(lid, self._lid_iocp.get(lid, 0x0F))
 
-    def _stop_and_refire(self):
-        self._raw_stop_diag()
-        if self._active_lids:
-            time.sleep(0.005)
-            self._s.reset_input_buffer()
-            self._refire_active()
-
-    # TL+TR → HZ auto-merge (same K-Line optimization as scene editor)
     _LID_TL = 0x0A
     _LID_TR = 0x0B
     _LID_HZ = 0x08
-
-    def _merge_tl_tr_on(self, lid: int) -> bool:
-        """If pressing TL while TR active (or vice versa), merge to HZ."""
-        other = self._LID_TR if lid == self._LID_TL else self._LID_TL
-        if lid in (self._LID_TL, self._LID_TR) and other in self._active_lids:
-            self._active_lids.discard(other)
-            self._active_lids.add(self._LID_HZ)
-            self._stop_and_refire()
-            return True
-        return False
-
-    def _split_hz_off(self, lid: int) -> bool:
-        """If releasing TL/TR while HZ is active, split to the remaining side."""
-        if lid in (self._LID_TL, self._LID_TR) and self._LID_HZ in self._active_lids:
-            remaining = self._LID_TR if lid == self._LID_TL else self._LID_TL
-            self._active_lids.discard(self._LID_HZ)
-            self._active_lids.add(remaining)
-            self._stop_and_refire()
-            return True
-        return False
 
     def _drain_queue(self):
         """Drain all pending messages from queue without blocking."""
@@ -208,8 +182,9 @@ class LiveSession:
         return msgs
 
     def _process_batch(self, batch):
-        """Process a batch of messages, firing simultaneous note_ons together."""
-        fire_lids = []
+        """Process a batch of messages, applying state changes then syncing K-Line once."""
+        before = set(self._active_lids)
+        need_sync = False
         for action, lid, iocp in batch:
             if action == "quit":
                 self._running = False
@@ -217,35 +192,53 @@ class LiveSession:
             elif action == "pulse":
                 self._raw_fire(lid, iocp)
                 time.sleep(0.01)
-                self._stop_and_refire()
-            elif action == "on":
-                if self._merge_tl_tr_on(lid):
-                    pass
-                elif lid not in self._active_lids:
-                    fire_lids.append((lid, iocp))
-            elif action == "off":
-                pass
-            elif action == "all_off":
                 self._raw_stop_diag()
+                if self._active_lids:
+                    self._refire_active()
+            elif action == "on":
+                if lid in (self._LID_TL, self._LID_TR):
+                    other = self._LID_TR if lid == self._LID_TL else self._LID_TL
+                    if other in self._active_lids:
+                        self._active_lids.discard(other)
+                        self._lid_iocp.pop(other, None)
+                        self._active_lids.add(self._LID_HZ)
+                        self._lid_iocp[self._LID_HZ] = 0x0F
+                        need_sync = True
+                        continue
+                if lid not in self._active_lids:
+                    self._active_lids.add(lid)
+                    self._lid_iocp[lid] = iocp
+            elif action == "off":
+                if lid in (self._LID_TL, self._LID_TR) and self._LID_HZ in self._active_lids:
+                    remaining = self._LID_TR if lid == self._LID_TL else self._LID_TL
+                    self._active_lids.discard(self._LID_HZ)
+                    self._lid_iocp.pop(self._LID_HZ, None)
+                    self._active_lids.add(remaining)
+                    self._lid_iocp[remaining] = 0x0F
+                    need_sync = True
+                elif lid in self._active_lids:
+                    self._active_lids.discard(lid)
+                    self._lid_iocp.pop(lid, None)
+            elif action == "all_off":
                 self._active_lids.clear()
+                self._lid_iocp.clear()
                 self._loop_lids.clear()
-                fire_lids.clear()
             elif action == "loop_on":
                 self._loop_lids.add(lid)
             elif action == "loop_off":
                 self._loop_lids.discard(lid)
 
-        for lid, iocp in fire_lids:
-            self._raw_fire(lid, iocp)
-            self._active_lids.add(lid)
+        added = self._active_lids - before
+        removed = before - self._active_lids
 
-        for action, lid, _ in batch:
-            if action == "off":
-                if self._split_hz_off(lid):
-                    pass
-                elif lid in self._active_lids:
-                    self._active_lids.discard(lid)
-                    self._stop_and_refire()
+        if removed or need_sync:
+            self._raw_stop_diag()
+            if self._active_lids:
+                time.sleep(0.005)
+                self._refire_active()
+        elif added:
+            for lid in added:
+                self._raw_fire(lid, self._lid_iocp.get(lid, 0x0F))
 
     _KEEPALIVE_S = 3.0
 
@@ -259,6 +252,7 @@ class LiveSession:
 
             try:
                 first = self._q.get(timeout=timeout)
+                time.sleep(0.015)
                 batch = [first] + self._drain_queue()
                 self._process_batch(batch)
                 last_keepalive = time.time()

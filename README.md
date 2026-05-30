@@ -21,7 +21,26 @@ ECM(0x10) に対して以下を IO Control で叩けるところまで判明:
 | 全解錠 | 0x05 | 0x01 | パルス |
 | トランク開放 | 0x09 | 0x01 | パルス |
 | ブザー/チャープ | 0x11 | 0x01 | 短 |
+| ブザー/チャープ (持続) | 0x11 | 0x02 | StopDiag で停止 |
 | ホーン | 0x26 | 0x01 | ~1s |
+| ルームランプ | 0x02 | 0x1E | StopDiag で消灯 |
+| カーゴエリアライト | 0x12 | 0x1E | StopDiag で消灯 |
+| フロントワイパー Low | 0x19 | 0x05 | StopDiag で停止 |
+| フロントワイパー Hi | 0x1A | 0x05 | StopDiag で停止 |
+| リアワイパー | 0x0D | 0x05 | StopDiag で停止 |
+| フロントウォッシャー | 0x1B | 0x05 | StopDiag で停止 |
+| リヤウォッシャー | 0x0E | 0x05 | StopDiag で停止 |
+| 左ウィンカー (別IOCP) | 0x0A | 0x05 | 0x0F でも可 |
+| 右ウィンカー (別IOCP) | 0x0B | 0x05 | 0x0F でも可 |
+
+別 ECU (0x72) 経由でも以下が判明:
+
+| 機能 | LID | IOCP | ECU | Envelope |
+|---|---|---|---|---|
+| ロービーム | 0x01 | 0x01 | 0x72 | StopDiag(0x72宛)で消灯 |
+| ロービーム | 0x01 | 0x05 | 0x72 | StopDiag(0x72宛)で消灯 |
+| ロービーム | 0x01 | 0x0F | 0x72 | StopDiag(0x72宛)で消灯 |
+| ロービーム+車幅灯 | 0x01 | 0x1E | 0x72 | StopDiag(0x72宛)で消灯 |
 
 加えて StopDiagSession を組み合わせると envelope を任意の長さに切り詰められるので、 本来 15秒固定のハザードを 50ms の超短tap にしたり、 ハイビームを 8Hz で点滅させたり、 ハザード+ハイビーム+ロービームの3系統でビートを打たせたりできる。 詳しくは [docs/findings.md](docs/findings.md)。
 
@@ -83,6 +102,19 @@ K-Line (10400bps, 半二重) はシリアル通信なので物理的に同時送
 - `cmd_delay` (デフォルト 20ms) が1LIDあたりの間隔。 10400bps で コマンド14byte (~13ms) + 応答7byte (~7ms) = ~20ms が物理下限
 - 実測では 18ms 前後まで詰められるが、 それ以下だとバス衝突で一部ライトが不発になる
 
+## ライブモードのバッチ処理
+
+ライブモードのワーカースレッドは、キューからメッセージを取得後 **15ms 待機**してから残りのメッセージをまとめて1バッチとして処理する。
+
+K-Line では個別ライトの消灯ができず、消灯時は `StopDiag`（全消灯）→ 残りを `refire`（再点灯）する必要がある。 連打時にこの `StopDiag → refire` が毎回走ると ECM が追いつかずライトが残る問題があったため、15ms のバッファで複数イベントをまとめ、最終状態だけを K-Line に1回送る設計にしている。
+
+```
+例: HB + LB 同時押し → 両方離す
+
+旧: off(HB) → StopDiag → refire(LB) → off(LB) → StopDiag  ← ECMが追いつかない
+新: off(HB) + off(LB) を15msでまとめ → StopDiag 1回       ← 安定
+```
+
 ## CLI で叩きたい場合
 
 ```bash
@@ -132,11 +164,16 @@ Novation Launchpad X を USB 接続し、ライブモード用の物理キーボ
 
 ```bash
 cd launchpad
-make
-./run.sh            # 起動（前のプロセスも自動で kill）
-./run.sh stop       # 停止
-./run.sh restart    # 再起動
+make                # 初回のみビルド
+cd ..
+
+./run-keyboard.sh           # 起動（前のプロセスも自動で kill）
+./run-keyboard.sh stop      # 停止
+./run-keyboard.sh restart   # 再起動
 ```
+
+web (API + Vite) は `./run.sh`、keyboard は `./run-keyboard.sh` と起動スクリプトが分かれている。
+`run-keyboard.sh` は `launchpad/run.sh` の薄いラッパーなので、`cd launchpad && ./run.sh` でも同じ。
 
 操作可能なパッドだけが光り、それ以外は暗くなる。押下時は白く光る。終了は `Ctrl+C`。
 
