@@ -25,8 +25,8 @@ const LIGHT_PADS: Pad[] = [
   { id: 'hazard',     label: 'HZ',  key: 'e', color: 'amber', mode: 'hold' },
   { id: 'position',   label: 'PS',  key: 'a', color: 'amber', mode: 'hold' },
   { id: 'fog',        label: 'FG',  key: 's', color: 'amber', mode: 'hold' },
-  { id: 'turn_right', label: 'TL',  key: 'd', color: 'amber', mode: 'hold' },
-  { id: 'turn_left',  label: 'TR',  key: 'r', color: 'amber', mode: 'hold' },
+  { id: 'turn_left',  label: 'TL',  key: 'r', color: 'amber', mode: 'hold' },
+  { id: 'turn_right', label: 'TR',  key: 'd', color: 'amber', mode: 'hold' },
 ]
 
 const ACTION_PADS: Pad[] = [
@@ -35,7 +35,36 @@ const ACTION_PADS: Pad[] = [
   { id: 'chirp',   label: 'CHIRP',  key: 'c', color: 'purple', mode: 'pulse' },
 ]
 
-const HORN_PAD: Pad = { id: 'horn', label: 'HORN', key: ' ', color: 'red', mode: 'pulse' }
+const UTIL_PADS: Pad[] = [
+  { id: 'room_lamp',       label: 'ROOM',   key: 't', color: 'cyan',   mode: 'hold' },
+  { id: 'cargo_light',     label: 'CARGO',  key: 'y', color: 'cyan',   mode: 'hold' },
+  { id: 'chirp_hold',      label: 'CHIRP+', key: 'u', color: 'purple', mode: 'hold' },
+  { id: 'wiper_front_low', label: 'WI-FL',  key: 'g', color: 'blue',   mode: 'hold' },
+  { id: 'wiper_front_hi',  label: 'WI-FH',  key: 'h', color: 'blue',   mode: 'hold' },
+  { id: 'wiper_rear',      label: 'WI-R',   key: 'j', color: 'blue',   mode: 'hold' },
+  { id: 'washer_front',    label: 'WA-F',   key: 'k', color: 'cyan',   mode: 'hold' },
+  { id: 'washer_rear',     label: 'WA-R',   key: 'l', color: 'cyan',   mode: 'hold' },
+]
+
+const HORN_SHORT_PAD: Pad = { id: 'horn_short', label: 'H.S', key: 'b', color: 'yellow', mode: 'pulse' }
+const HORN_PAD: Pad = { id: 'horn', label: 'HORN', key: ' ', color: 'orange', mode: 'hold' }
+
+// --- Launchpad-mirrored grid layout (8 columns × 4 rows) ---
+// Mirrors launchpad/keymap-live.conf: 機能行 + 主3段, 中央=ウィンカー
+const ALL_PADS: Pad[] = [...LIGHT_PADS, ...ACTION_PADS, ...UTIL_PADS, HORN_SHORT_PAD, HORN_PAD]
+const padById = new Map(ALL_PADS.map((p) => [p.id, p]))
+
+const STOP_CELL = 'STOP'
+// 左端(col1)=空き / col2-7=主要キーを中央寄せ / col4-5=中央ウィンカー / 右端(col8)=低頻度キー(H.S/HORN/STOP)
+const GRID_LAYOUT: (string | null)[][] = [
+  [null, 'low_beam', 'high_beam', 'hazard', 'position', 'fog', 'chirp_hold', 'horn_short'],
+  [null, 'room_lamp', 'cargo_light', 'turn_left', 'turn_right', 'washer_front', 'washer_rear', 'horn'],
+  [null, 'lock', 'unlock', 'chirp', 'wiper_front_low', 'wiper_front_hi', 'wiper_rear', STOP_CELL],
+]
+
+function getPad(id: string): Pad {
+  return padById.get(id)!
+}
 
 // --- Interaction ---
 
@@ -65,6 +94,22 @@ function padUp(pad: Pad) {
       noteOff(pad.id)
     }
   }
+}
+
+function releaseAllKeys() {
+  for (const id of pressedPads.value) {
+    noteOff(id)
+  }
+  pressedKeys.value.clear()
+  pressedPads.value.clear()
+}
+
+function onBlur() {
+  releaseAllKeys()
+}
+
+function onVisibilityChange() {
+  if (document.hidden) releaseAllKeys()
 }
 
 function onPointerRelease(e: PointerEvent) {
@@ -97,7 +142,7 @@ function onKeyUp(e: KeyboardEvent) {
 
 function findPadByKey(key: string): Pad | undefined {
   const k = key === ' ' ? ' ' : key
-  return [...LIGHT_PADS, ...ACTION_PADS, HORN_PAD].find((p) => p.key === k)
+  return [...LIGHT_PADS, ...ACTION_PADS, ...UTIL_PADS, HORN_SHORT_PAD, HORN_PAD].find((p) => p.key === k)
 }
 
 function handleAllOff() {
@@ -127,9 +172,9 @@ function padColorClass(pad: Pad): string {
   const on = isActive(pad.id)
   const map: Record<string, string> = {
     amber:  on ? 'bg-amber-400 shadow-amber-400/50'  : 'bg-slate-700 hover:bg-slate-600',
-    yellow: on ? 'bg-yellow-300 shadow-yellow-300/50' : 'bg-slate-700 hover:bg-slate-600',
+    yellow: on ? 'bg-yellow-300 shadow-yellow-300/50' : 'bg-yellow-900 hover:bg-yellow-800',
     white:  on ? 'bg-white shadow-white/50'           : 'bg-slate-700 hover:bg-slate-600',
-    orange: on ? 'bg-orange-400 shadow-orange-400/50' : 'bg-slate-700 hover:bg-slate-600',
+    orange: on ? 'bg-orange-400 shadow-orange-400/50' : 'bg-orange-900 hover:bg-orange-800',
     cyan:   on ? 'bg-cyan-400 shadow-cyan-400/50'     : 'bg-slate-700 hover:bg-slate-600',
     green:  on ? 'bg-green-400 shadow-green-400/50'   : 'bg-slate-700 hover:bg-slate-600',
     blue:   on ? 'bg-blue-400 shadow-blue-400/50'     : 'bg-slate-700 hover:bg-slate-600',
@@ -222,6 +267,8 @@ onMounted(() => {
   connect()
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('blur', onBlur)
+  document.addEventListener('visibilitychange', onVisibilityChange)
   document.addEventListener('pointerup', onPointerRelease)
   document.addEventListener('pointercancel', onPointerRelease)
   document.addEventListener('fullscreenchange', onFullscreenChange)
@@ -232,6 +279,8 @@ onUnmounted(() => {
   disconnect()
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
+  window.removeEventListener('blur', onBlur)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   document.removeEventListener('pointerup', onPointerRelease)
   document.removeEventListener('pointercancel', onPointerRelease)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
@@ -300,58 +349,44 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Lights -->
-      <div class="flex-1 grid grid-cols-4 gap-3" style="grid-template-rows: 1fr 1fr">
-        <button v-for="(pad, i) in LIGHT_PADS" :key="pad.id"
-                :class="[padColorClass(pad), isActive(pad.id) ? 'shadow-lg scale-95' : '', loopPads.has(pad.id) ? 'ring-2 ring-amber-400' : '']"
-                class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75"
-                :style="{ order: i < 3 ? i : i + 1 }"
-                @pointerdown.prevent="padDown(pad, $event)">
-          <span class="text-2xl sm:text-3xl font-bold"
-                :class="isActive(pad.id) ? 'text-slate-900' : 'text-slate-300'">
-            {{ pad.label }}
-          </span>
-          <span v-if="loopPads.has(pad.id)" class="text-xs mt-0.5 text-amber-300 font-bold">LOOP</span>
-          <span class="text-xs mt-1 opacity-60 uppercase">{{ pad.key === ' ' ? 'SPACE' : pad.key }}</span>
-        </button>
-        <!-- All Stop (右上) -->
-        <button class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75 bg-orange-700 hover:bg-orange-600 active:bg-orange-500 active:scale-95"
-                style="order: 3"
-                @pointerdown.prevent="handleAllOff">
-          <span class="text-2xl sm:text-3xl font-bold text-white">STOP</span>
-          <span class="text-xs mt-1 opacity-60">V</span>
-        </button>
-      </div>
+      <!-- Pad grid (Launchpad-mirrored: 3段, 中央=ウィンカー) -->
+      <div class="flex-1 grid gap-3" style="grid-template-rows: repeat(3, 1fr)">
+        <div v-for="(row, ri) in GRID_LAYOUT" :key="ri"
+             class="grid gap-3" style="grid-template-columns: repeat(8, 1fr)">
+          <template v-for="(cell, ci) in row" :key="ci">
+            <!-- empty slot -->
+            <div v-if="cell === null" />
 
-      <!-- Actions + Horn -->
-      <div class="grid gap-3" style="grid-template-columns: repeat(3, 1fr) 2fr; height: 25%">
-        <button v-for="pad in ACTION_PADS" :key="pad.id"
-                :class="[padColorClass(pad), isActive(pad.id) ? 'shadow-lg scale-95' : '']"
-                class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75"
-                @pointerdown.prevent="padDown(pad, $event)">
-          <span class="text-lg sm:text-xl font-bold"
-                :class="isActive(pad.id) ? 'text-slate-900' : 'text-slate-300'">
-            {{ pad.label }}
-          </span>
-          <span class="text-xs mt-1 opacity-60 uppercase">{{ pad.key === ' ' ? 'SPACE' : pad.key }}</span>
-        </button>
+            <!-- STOP (全停止) -->
+            <button v-else-if="cell === STOP_CELL"
+                    class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75 bg-purple-700 hover:bg-purple-600 active:bg-purple-500 active:scale-95"
+                    @pointerdown.prevent="handleAllOff">
+              <span class="text-xl sm:text-2xl font-bold text-white">STOP</span>
+              <span class="text-xs mt-1 opacity-60">V</span>
+            </button>
 
-        <!-- Horn -->
-        <button :class="[padColorClass(HORN_PAD), isActive(HORN_PAD.id) ? 'shadow-lg scale-95' : '']"
-                class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75 col-span-1"
-                @pointerdown.prevent="padDown(HORN_PAD, $event)">
-          <span class="text-2xl sm:text-3xl font-bold"
-                :class="isActive(HORN_PAD.id) ? 'text-white' : 'text-red-300'">
-            HORN
-          </span>
-          <span class="text-xs mt-1 opacity-60">SPACE</span>
-        </button>
+            <!-- normal pad -->
+            <button v-else
+                    :class="[padColorClass(getPad(cell)), isActive(cell) ? 'shadow-lg scale-95' : '', loopPads.has(cell) ? 'ring-2 ring-amber-400' : '']"
+                    class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75"
+                    @pointerdown.prevent="padDown(getPad(cell), $event)">
+              <span class="text-xl sm:text-2xl font-bold"
+                    :class="getPad(cell).color === 'red'
+                      ? (isActive(cell) ? 'text-white' : 'text-red-300')
+                      : (isActive(cell) ? 'text-slate-900' : 'text-slate-300')">
+                {{ getPad(cell).label }}
+              </span>
+              <span v-if="loopPads.has(cell)" class="text-xs mt-0.5 text-amber-300 font-bold">LOOP</span>
+              <span class="text-xs mt-1 opacity-60 uppercase">{{ getPad(cell).key === ' ' ? 'SPACE' : getPad(cell).key }}</span>
+            </button>
+          </template>
+        </div>
       </div>
     </div>
 
     <!-- Keyboard hint -->
     <div class="text-center text-xs text-slate-500 pb-2">
-      Q W E R / A S D = ライト | Z X C = アクション | SPACE = ホーン | V = 全停止 | ESC = 終了
+      Z X C B SPACE V = アクション/ホーン/全停止 | Q W E / A S = ライト | T Y U = 室内/チャープ | R D = 左右ウィンカー | K L = ウォッシャー | G H J = ワイパー | ESC = 終了
     </div>
   </div>
 </template>
