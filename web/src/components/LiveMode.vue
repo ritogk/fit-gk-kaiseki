@@ -57,9 +57,9 @@ const padById = new Map(ALL_PADS.map((p) => [p.id, p]))
 const STOP_CELL = 'STOP'
 // 左端(col1)=空き / col2-7=主要キーを中央寄せ / col4-5=中央ウィンカー / 右端(col8)=低頻度キー(H.S/HORN/STOP)
 const GRID_LAYOUT: (string | null)[][] = [
-  [null, 'low_beam', 'high_beam', 'hazard', 'position', 'fog', 'chirp_hold', 'horn_short'],
+  [null, 'low_beam', 'high_beam', 'hazard', 'position', 'fog', null, 'horn_short'],
   [null, 'room_lamp', 'cargo_light', 'turn_left', 'turn_right', 'washer_front', 'washer_rear', 'horn'],
-  [null, 'lock', 'unlock', 'chirp', 'wiper_front_low', 'wiper_front_hi', 'wiper_rear', STOP_CELL],
+  ['lock', 'unlock', 'chirp', 'chirp_hold', 'wiper_front_low', 'wiper_front_hi', 'wiper_rear', STOP_CELL],
 ]
 
 function getPad(id: string): Pad {
