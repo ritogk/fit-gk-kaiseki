@@ -3,6 +3,7 @@
 Keeps the serial port open and processes note_on/note_off commands
 via a dedicated worker thread for minimum latency (~20-40ms end-to-end).
 """
+import os
 import queue
 import threading
 import time
@@ -20,7 +21,10 @@ def _cs(d):
 _IO_CONTROL_TEMPLATE = [0x80, ECM, TESTER, 0x08, 0x30, 0x00, 0x0F, 0, 0, 0, 0, 0]
 _STOP_DIAG = [0x80, ECM, TESTER, 0x01, 0x20]
 _TESTER_PRESENT = [0x80, ECM, TESTER, 0x01, 0x3E]
-_TX_GAP = 0.05
+# Min gap between consecutive K-Line frames (half-duplex P2). Physical floor is
+# ~20ms (13B cmd + 7B resp @10400bps); below that the bus collides and some
+# io_control frames get dropped. Tune live via KLINE_TX_GAP to find the floor.
+_TX_GAP = float(os.environ.get("KLINE_TX_GAP", "0.02"))
 
 
 class LiveSession:
