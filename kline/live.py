@@ -20,7 +20,6 @@ def _cs(d):
 _IO_CONTROL_TEMPLATE = [0x80, ECM, TESTER, 0x08, 0x30, 0x00, 0x0F, 0, 0, 0, 0, 0]
 _STOP_DIAG = [0x80, ECM, TESTER, 0x01, 0x20]
 _TESTER_PRESENT = [0x80, ECM, TESTER, 0x01, 0x3E]
-_CMD_INTERVAL = 0.015
 
 
 class LiveSession:
@@ -139,6 +138,15 @@ class LiveSession:
         lid_to_name = {v[0]: k for k, v in LIDS.items()}
         return {lid_to_name[lid] for lid in self._active_lids if lid in lid_to_name}
 
+    def _read_response(self):
+        """Wait for the ECU's response before returning so the next command
+        cannot collide with it on the half-duplex K-Line bus (ISO 14230 P2).
+
+        The serial port is opened with timeout=0.05s, so each read() blocks up
+        to ~P2max. We read until the bus goes idle (a read returns nothing),
+        which paces consecutive commands without a fixed blind sleep."""
+        self._s.read(128)
+
     def _raw_fire(self, lid: int, iocp: int = 0x0F):
         p = list(_IO_CONTROL_TEMPLATE)
         p[5] = lid
@@ -146,22 +154,19 @@ class LiveSession:
         self._s.reset_input_buffer()
         self._s.write(bytes(p) + bytes([_cs(p)]))
         self._s.flush()
-        time.sleep(_CMD_INTERVAL)
-        self._s.reset_input_buffer()
+        self._read_response()
 
     def _raw_stop_diag(self):
         self._s.reset_input_buffer()
         self._s.write(bytes(_STOP_DIAG) + bytes([_cs(_STOP_DIAG)]))
         self._s.flush()
-        time.sleep(_CMD_INTERVAL)
-        self._s.reset_input_buffer()
+        self._read_response()
 
     def _raw_tester_present(self):
         self._s.reset_input_buffer()
         self._s.write(bytes(_TESTER_PRESENT) + bytes([_cs(_TESTER_PRESENT)]))
         self._s.flush()
-        time.sleep(_CMD_INTERVAL)
-        self._s.reset_input_buffer()
+        self._read_response()
 
     def _refire_active(self):
         for lid in self._active_lids:
