@@ -30,14 +30,14 @@ const LIGHT_PADS: Pad[] = [
 ]
 
 const ACTION_PADS: Pad[] = [
-  { id: 'lock',    label: 'LOCK',   key: 'z', color: 'green',  mode: 'pulse' },
-  { id: 'unlock',  label: 'UNLOCK', key: 'x', color: 'green',  mode: 'pulse' },
+  { id: 'lock',    label: 'LOCK',   key: 'z', color: 'purple', mode: 'pulse' },
+  { id: 'unlock',  label: 'UNLOCK', key: 'x', color: 'purple', mode: 'pulse' },
   { id: 'chirp',   label: 'CHIRP',  key: 'c', color: 'purple', mode: 'pulse' },
 ]
 
 const UTIL_PADS: Pad[] = [
-  { id: 'room_lamp',       label: 'ROOM',   key: 't', color: 'cyan',   mode: 'hold' },
-  { id: 'cargo_light',     label: 'CARGO',  key: 'y', color: 'cyan',   mode: 'hold' },
+  { id: 'room_lamp',       label: 'ROOM',   key: 't', color: 'amber',  mode: 'hold' },
+  { id: 'cargo_light',     label: 'CARGO',  key: 'y', color: 'amber',  mode: 'hold' },
   { id: 'chirp_hold',      label: 'CHIRP+', key: 'u', color: 'purple', mode: 'hold' },
   { id: 'wiper_front_low', label: 'WI-FL',  key: 'g', color: 'blue',   mode: 'hold' },
   { id: 'wiper_front_hi',  label: 'WI-FH',  key: 'h', color: 'blue',   mode: 'hold' },
@@ -55,11 +55,12 @@ const ALL_PADS: Pad[] = [...LIGHT_PADS, ...ACTION_PADS, ...UTIL_PADS, HORN_SHORT
 const padById = new Map(ALL_PADS.map((p) => [p.id, p]))
 
 const STOP_CELL = 'STOP'
-// 左端(col1)=空き / col2-7=主要キーを中央寄せ / col4-5=中央ウィンカー / 右端(col8)=低頻度キー(H.S/HORN/STOP)
+// 4段構成: 1段目=荷室灯+STOP / 2段目=ライト類(中央) / 3段目=ドア/チャープ / 4段目=ROOM+フロントワイパー/ウォッシャーをセットで固める / ホーン系は右下に縦並び
 const GRID_LAYOUT: (string | null)[][] = [
-  [null, 'low_beam', 'high_beam', 'hazard', 'position', 'fog', null, 'horn_short'],
-  [null, 'room_lamp', 'cargo_light', 'turn_left', 'turn_right', 'washer_front', 'washer_rear', 'horn'],
-  ['lock', 'unlock', 'chirp', 'chirp_hold', 'wiper_front_low', 'wiper_front_hi', 'wiper_rear', STOP_CELL],
+  [null, null, null, 'cargo_light', null, null, null, STOP_CELL],
+  [null, 'low_beam', 'high_beam', 'hazard', 'position', 'fog', 'turn_left', 'turn_right'],
+  [null, null, 'lock', 'unlock', 'chirp', 'chirp_hold', 'horn_short', null],
+  [null, 'wiper_rear', 'washer_rear', 'wiper_front_hi', 'wiper_front_low', 'washer_front', 'room_lamp', 'horn'],
 ]
 
 function getPad(id: string): Pad {
@@ -350,7 +351,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Pad grid (Launchpad-mirrored: 3段, 中央=ウィンカー) -->
-      <div class="flex-1 grid gap-3" style="grid-template-rows: repeat(3, 1fr)">
+      <div class="flex-1 grid gap-3" style="grid-template-rows: repeat(4, 1fr)">
         <div v-for="(row, ri) in GRID_LAYOUT" :key="ri"
              class="grid gap-3" style="grid-template-columns: repeat(8, 1fr)">
           <template v-for="(cell, ci) in row" :key="ci">
@@ -359,7 +360,7 @@ onUnmounted(() => {
 
             <!-- STOP (全停止) -->
             <button v-else-if="cell === STOP_CELL"
-                    class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75 bg-purple-700 hover:bg-purple-600 active:bg-purple-500 active:scale-95"
+                    class="pad rounded-xl flex flex-col items-center justify-center transition-all duration-75 bg-red-700 hover:bg-red-600 active:bg-red-500 active:scale-95"
                     @pointerdown.prevent="handleAllOff">
               <span class="text-xl sm:text-2xl font-bold text-white">STOP</span>
               <span class="text-xs mt-1 opacity-60">V</span>

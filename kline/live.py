@@ -25,6 +25,11 @@ _TESTER_PRESENT = [0x80, ECM, TESTER, 0x01, 0x3E]
 # ~20ms (13B cmd + 7B resp @10400bps); below that the bus collides and some
 # io_control frames get dropped. Tune live via KLINE_TX_GAP to find the floor.
 _TX_GAP = float(os.environ.get("KLINE_TX_GAP", "0.02"))
+# horn_short(LID 0x26)の StopDiag 送信間隔。短いほど鳴動が短いが、詰めすぎると
+# StopDiag が半二重バス衝突で取りこぼされ、ECUエンベロープで鳴りっぱなしになる。
+# 実機確認: 12/15/18ms=NG(鳴りっぱなし) / 20ms=OK。20ms が固定値での実用下限。
+_HORN_LID = 0x26
+_HORN_STOP_GAP = float(os.environ.get("KLINE_HORN_GAP", "0.02"))
 
 
 class LiveSession:
@@ -144,18 +149,18 @@ class LiveSession:
         lid_to_name = {v[0]: k for k, v in LIDS.items()}
         return {lid_to_name[lid] for lid in self._active_lids if lid in lid_to_name}
 
-    def _pace(self):
+    def _pace(self, gap=None):
         """Ensure enough gap from the previous TX that the ECU's response has
         cleared the half-duplex K-Line bus before we transmit again (ISO 14230
         P2). Measured from the last TX, so an isolated command waits not at all
         while only back-to-back frames (e.g. multi-light fire) get spaced out."""
-        wait = _TX_GAP - (time.time() - self._last_tx)
+        wait = (gap if gap is not None else _TX_GAP) - (time.time() - self._last_tx)
         if wait > 0:
             time.sleep(wait)
         self._s.reset_input_buffer()
 
-    def _send(self, frame):
-        self._pace()
+    def _send(self, frame, gap=None):
+        self._pace(gap)
         self._s.write(bytes(frame) + bytes([_cs(frame)]))
         self._s.flush()
         self._last_tx = time.time()
@@ -166,8 +171,8 @@ class LiveSession:
         p[6] = iocp
         self._send(p)
 
-    def _raw_stop_diag(self):
-        self._send(_STOP_DIAG)
+    def _raw_stop_diag(self, gap=None):
+        self._send(_STOP_DIAG, gap)
 
     def _raw_tester_present(self):
         self._send(_TESTER_PRESENT)
@@ -200,8 +205,11 @@ class LiveSession:
                 return
             elif action == "pulse":
                 self._raw_fire(lid, iocp)
-                time.sleep(0.01)
-                self._raw_stop_diag()
+                if lid == _HORN_LID:
+                    self._raw_stop_diag(gap=_HORN_STOP_GAP)  # 鳴動を最短化
+                else:
+                    time.sleep(0.01)
+                    self._raw_stop_diag()
                 if self._active_lids:
                     self._refire_active()
             elif action == "on":
