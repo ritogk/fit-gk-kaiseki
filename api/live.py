@@ -36,6 +36,23 @@ async def live_ws(ws: WebSocket):
             msg_type = msg.get("type")
             cmd_id = msg.get("id", "")
 
+            if msg_type == "ping":
+                await ws.send_json({"type": "pong"})
+                continue
+            if msg_type == "exit":
+                should_stop = True
+                break
+
+            # コマンド処理前にセッションの生存を確認。ワーカーがシリアル異常で
+            # 死んでいたら作り直し、再起動なしでユーザー操作だけで復旧させる。
+            if not session.is_alive():
+                try:
+                    session = start_session()
+                    await ws.send_json({"type": "ready"})
+                except RuntimeError as e:
+                    await ws.send_json({"type": "error", "message": str(e)})
+                    continue
+
             if msg_type == "note_on":
                 session.note_on(cmd_id)
             elif msg_type == "note_off":
@@ -48,12 +65,6 @@ async def live_ws(ws: WebSocket):
                 session.loop_off(cmd_id)
             elif msg_type == "bpm":
                 session.set_bpm(float(msg.get("bpm", 120)))
-            elif msg_type == "exit":
-                should_stop = True
-                break
-            elif msg_type == "ping":
-                await ws.send_json({"type": "pong"})
-                continue
             else:
                 continue
 

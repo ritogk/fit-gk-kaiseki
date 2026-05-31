@@ -5,6 +5,7 @@ via a dedicated worker thread for minimum latency (~20-40ms end-to-end).
 """
 import os
 import queue
+import sys
 import threading
 import time
 
@@ -59,12 +60,22 @@ class LiveSession:
             self._release()
             raise
 
+    def is_alive(self) -> bool:
+        """セッションが生きている(ワーカースレッドが稼働中)か。
+        例外でワーカーが死んだゾンビセッションを start_session 側で検出するため。"""
+        return self._running and self._thread is not None and self._thread.is_alive()
+
     def stop(self):
         self._running = False
         self._q.put(("quit", None, None))
-        if self._thread:
+        if self._thread and self._thread is not threading.current_thread():
             self._thread.join(timeout=3.0)
-            self._thread = None
+        self._thread = None
+        self._close_and_release()
+
+    def _close_and_release(self):
+        """シリアルを閉じてロックを解放する。stop() とワーカー異常終了の双方から
+        呼ばれるため冪等。"""
         if self._s:
             try:
                 self._raw_stop_diag()
@@ -80,11 +91,14 @@ class LiveSession:
         self._release()
 
     def _release(self):
+        # 先に _locked を倒してから解放し、ワーカー異常終了と再構築が同時に走った
+        # 場合の二重 release(RuntimeError)を防ぐ。
         if self._locked:
+            self._locked = False
             try:
                 _serial_lock.release()
-            finally:
-                self._locked = False
+            except RuntimeError:
+                pass
 
     def _connect(self):
         s = serial.Serial(self.port, BAUD, timeout=0.05)
@@ -259,46 +273,67 @@ class LiveSession:
 
     _KEEPALIVE_S = 3.0
 
+    # シリアル例外がこの回数連続したら回復不能とみなしセッションを畳む
+    _MAX_CONSECUTIVE_ERRORS = 3
+
     def _worker(self):
         last_keepalive = time.time()
         last_beat = time.time()
         loop_phase = False
+        errors = 0
         while self._running:
             beat_interval = 60.0 / self._bpm / 2 if self._loop_lids else 0.0
             timeout = min(beat_interval, 0.5) if beat_interval > 0 else 0.5
 
             try:
-                first = self._q.get(timeout=timeout)
-                time.sleep(0.015)
-                batch = [first] + self._drain_queue()
-                self._process_batch(batch)
-                last_keepalive = time.time()
-            except queue.Empty:
-                pass
+                try:
+                    first = self._q.get(timeout=timeout)
+                    time.sleep(0.015)
+                    batch = [first] + self._drain_queue()
+                    self._process_batch(batch)
+                    last_keepalive = time.time()
+                except queue.Empty:
+                    pass
 
-            now = time.time()
-            if now - last_keepalive > self._KEEPALIVE_S:
-                if self._active_lids:
-                    self._refire_active()
-                else:
-                    self._raw_tester_present()
-                last_keepalive = now
-
-            if self._loop_lids and beat_interval > 0:
                 now = time.time()
-                if now - last_beat >= beat_interval:
-                    loop_phase = not loop_phase
-                    self._raw_stop_diag()
-                    held = self._active_lids - self._loop_lids
-                    if loop_phase:
-                        for lid in self._loop_lids:
-                            self._raw_fire(lid)
-                    for lid in held:
-                        self._raw_fire(lid)
-                    last_beat = now
+                if now - last_keepalive > self._KEEPALIVE_S:
+                    if self._active_lids:
+                        self._refire_active()
+                    else:
+                        self._raw_tester_present()
                     last_keepalive = now
-            else:
-                loop_phase = False
+
+                if self._loop_lids and beat_interval > 0:
+                    now = time.time()
+                    if now - last_beat >= beat_interval:
+                        loop_phase = not loop_phase
+                        self._raw_stop_diag()
+                        held = self._active_lids - self._loop_lids
+                        if loop_phase:
+                            for lid in self._loop_lids:
+                                self._raw_fire(lid)
+                        for lid in held:
+                            self._raw_fire(lid)
+                        last_beat = now
+                        last_keepalive = now
+                else:
+                    loop_phase = False
+
+                errors = 0  # 正常に1周できたらカウンタをリセット
+            except Exception as e:
+                # シリアルの瞬断・バッファエラー等。1回では落とさず小休止して継続し、
+                # 連続したら回復不能とみなしてセッションを畳む(次の再接続で作り直し)。
+                errors += 1
+                print(f"[live] worker error ({errors}/{self._MAX_CONSECUTIVE_ERRORS}): {e!r}",
+                      file=sys.stderr)
+                if errors >= self._MAX_CONSECUTIVE_ERRORS:
+                    print("[live] K-Line セッションを終了します(再接続で復旧します)", file=sys.stderr)
+                    self._running = False
+                    break
+                time.sleep(0.05)
+
+        # ループ脱出時(quit / 異常終了とも)に確実に解放。stop() からの場合も冪等。
+        self._close_and_release()
 
 
 _session: LiveSession | None = None
@@ -312,8 +347,15 @@ def get_session() -> LiveSession | None:
 def start_session() -> LiveSession:
     global _session
     with _session_lock:
-        if _session and _session._running:
+        if _session and _session.is_alive():
             return _session
+        # ゾンビ(ワーカーが死んだ)セッションが残っていれば確実に畳んでから作り直す
+        if _session:
+            try:
+                _session.stop()
+            except Exception:
+                pass
+            _session = None
         s = LiveSession()
         s.start()
         _session = s
