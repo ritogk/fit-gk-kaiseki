@@ -3,57 +3,25 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useWebSocket } from '../composables/useWebSocket'
 import { useApi } from '../composables/useApi'
 import CarFace from './CarFace.vue'
+import {
+  type Pad,
+  LIGHT_PADS,
+  getPad,
+  findPadByKey,
+  padColorClass as padColorClassFor,
+  CMD_TO_POS,
+} from '../pads'
 
-const emit = defineEmits<{ exit: [] }>()
+const emit = defineEmits<{ exit: []; seq: [] }>()
 
 const { connected, active, error, connect, disconnect, noteOn, noteOff, allOff, loopOn, loopOff, setBpm } = useWebSocket()
 const { apiCall } = useApi()
 
 // --- Pad definitions ---
-
-interface Pad {
-  id: string
-  label: string
-  key: string
-  color: string
-  mode: 'hold' | 'pulse'
-}
-
-const LIGHT_PADS: Pad[] = [
-  { id: 'low_beam',   label: 'LB',  key: 'q', color: 'amber', mode: 'hold' },
-  { id: 'high_beam',  label: 'HB',  key: 'w', color: 'amber', mode: 'hold' },
-  { id: 'hazard',     label: 'HZ',  key: 'e', color: 'amber', mode: 'hold' },
-  { id: 'position',   label: 'PS',  key: 'a', color: 'amber', mode: 'hold' },
-  { id: 'fog',        label: 'FG',  key: 's', color: 'amber', mode: 'hold' },
-  { id: 'turn_left',  label: 'TL',  key: 'r', color: 'amber', mode: 'hold' },
-  { id: 'turn_right', label: 'TR',  key: 'd', color: 'amber', mode: 'hold' },
-]
-
-const ACTION_PADS: Pad[] = [
-  { id: 'lock',    label: 'LOCK',   key: 'z', color: 'purple', mode: 'pulse' },
-  { id: 'unlock',  label: 'UNLOCK', key: 'x', color: 'purple', mode: 'pulse' },
-  { id: 'chirp',   label: 'CHIRP',  key: 'c', color: 'purple', mode: 'pulse' },
-]
-
-const UTIL_PADS: Pad[] = [
-  { id: 'room_lamp',       label: 'ROOM',   key: 't', color: 'amber',  mode: 'hold' },
-  { id: 'cargo_light',     label: 'CARGO',  key: 'y', color: 'amber',  mode: 'hold' },
-  { id: 'chirp_hold',      label: 'CHIRP+', key: 'u', color: 'purple', mode: 'hold' },
-  { id: 'wiper_front_low', label: 'WI-FL',  key: 'g', color: 'blue',   mode: 'hold' },
-  { id: 'wiper_front_hi',  label: 'WI-FH',  key: 'h', color: 'blue',   mode: 'hold' },
-  { id: 'wiper_rear',      label: 'WI-R',   key: 'j', color: 'blue',   mode: 'hold' },
-  { id: 'washer_front',    label: 'WA-F',   key: 'k', color: 'cyan',   mode: 'hold' },
-  { id: 'washer_rear',     label: 'WA-R',   key: 'l', color: 'cyan',   mode: 'hold' },
-]
-
-const HORN_SHORT_PAD: Pad = { id: 'horn_short', label: 'H.S', key: 'b', color: 'yellow', mode: 'pulse' }
-const HORN_PAD: Pad = { id: 'horn', label: 'HORN', key: ' ', color: 'orange', mode: 'hold' }
+// パッド定義・色・キー対応は web/src/pads.ts に共通化（StepSequencer と共用）
 
 // --- Launchpad-mirrored grid layout (8 columns × 4 rows) ---
 // Mirrors launchpad/keymap-live.conf: 機能行 + 主3段, 中央=ウィンカー
-const ALL_PADS: Pad[] = [...LIGHT_PADS, ...ACTION_PADS, ...UTIL_PADS, HORN_SHORT_PAD, HORN_PAD]
-const padById = new Map(ALL_PADS.map((p) => [p.id, p]))
-
 const STOP_CELL = 'STOP'
 // 4段構成: 1段目=荷室灯+STOP / 2段目=ライト類(中央) / 3段目=ドア/チャープ / 4段目=ROOM+フロントワイパー/ウォッシャーをセットで固める / ホーン系は右下に縦並び
 const GRID_LAYOUT: (string | null)[][] = [
@@ -62,10 +30,6 @@ const GRID_LAYOUT: (string | null)[][] = [
   [null, null, 'lock', 'unlock', 'chirp', 'chirp_hold', 'horn_short', null],
   [null, 'wiper_rear', 'washer_rear', 'wiper_front_hi', 'wiper_front_low', 'washer_front', 'room_lamp', 'horn'],
 ]
-
-function getPad(id: string): Pad {
-  return padById.get(id)!
-}
 
 // --- Interaction ---
 
@@ -141,11 +105,6 @@ function onKeyUp(e: KeyboardEvent) {
   if (pad) { e.preventDefault(); padUp(pad) }
 }
 
-function findPadByKey(key: string): Pad | undefined {
-  const k = key === ' ' ? ' ' : key
-  return [...LIGHT_PADS, ...ACTION_PADS, ...UTIL_PADS, HORN_SHORT_PAD, HORN_PAD].find((p) => p.key === k)
-}
-
 function handleAllOff() {
   allOff()
   pressedPads.value.clear()
@@ -158,11 +117,20 @@ async function emergencyStop() {
   await apiCall('POST', '/api/control/stop_all')
 }
 
-function handleExit() {
+function cleanup() {
   handleAllOff()
   if (loopTimer) { clearInterval(loopTimer); loopTimer = null }
   disconnect()
+}
+
+function handleExit() {
+  cleanup()
   emit('exit')
+}
+
+function switchToSeq() {
+  cleanup()
+  emit('seq')
 }
 
 function isActive(id: string): boolean {
@@ -170,19 +138,7 @@ function isActive(id: string): boolean {
 }
 
 function padColorClass(pad: Pad): string {
-  const on = isActive(pad.id)
-  const map: Record<string, string> = {
-    amber:  on ? 'bg-amber-400 shadow-amber-400/50'  : 'bg-slate-700 hover:bg-slate-600',
-    yellow: on ? 'bg-yellow-300 shadow-yellow-300/50' : 'bg-yellow-900 hover:bg-yellow-800',
-    white:  on ? 'bg-white shadow-white/50'           : 'bg-slate-700 hover:bg-slate-600',
-    orange: on ? 'bg-orange-400 shadow-orange-400/50' : 'bg-orange-900 hover:bg-orange-800',
-    cyan:   on ? 'bg-cyan-400 shadow-cyan-400/50'     : 'bg-slate-700 hover:bg-slate-600',
-    green:  on ? 'bg-green-400 shadow-green-400/50'   : 'bg-slate-700 hover:bg-slate-600',
-    blue:   on ? 'bg-blue-400 shadow-blue-400/50'     : 'bg-slate-700 hover:bg-slate-600',
-    purple: on ? 'bg-purple-400 shadow-purple-400/50' : 'bg-slate-700 hover:bg-slate-600',
-    red:    on ? 'bg-red-500 shadow-red-500/50'       : 'bg-red-900 hover:bg-red-800',
-  }
-  return map[pad.color] ?? ''
+  return padColorClassFor(pad, isActive(pad.id))
 }
 
 // --- Rhythm loop ---
@@ -228,10 +184,6 @@ function isLoopActive(id: string): boolean {
 // --- Monitor ---
 
 const showMonitor = ref(true)
-
-const CMD_TO_POS: Record<string, number> = {
-  hazard: 1, high_beam: 2, low_beam: 3, position: 4, fog: 5, turn_left: 6, turn_right: 7,
-}
 
 const monitorLights = computed(() => {
   const ids = new Set([...pressedPads.value])
@@ -302,6 +254,10 @@ onUnmounted(() => {
         <span v-if="error" class="text-red-400 text-xs">K-Lineデバイス未接続</span>
       </div>
       <div class="flex items-center gap-2">
+        <button class="px-3 py-1 rounded text-xs bg-indigo-600 hover:bg-indigo-500 font-bold"
+                @click="switchToSeq">
+          SEQ ▶
+        </button>
         <button class="px-3 py-1 rounded text-xs bg-slate-700 hover:bg-slate-600"
                 @click="showMonitor = !showMonitor">
           {{ showMonitor ? 'モニター非表示' : 'モニター表示' }}

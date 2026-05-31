@@ -2,6 +2,7 @@
 import { reactive, ref, onMounted, onUnmounted } from 'vue'
 import SceneEditor from './components/SceneEditor.vue'
 import LiveMode from './components/LiveMode.vue'
+import StepSequencer from './components/StepSequencer.vue'
 import { useApi } from './composables/useApi'
 import type { CommandMap } from './types'
 
@@ -12,6 +13,7 @@ const sceneEditor = ref<InstanceType<typeof SceneEditor> | null>(null)
 // --- Live mode ---
 
 const liveMode = ref(true)
+const seqMode = ref(false)
 
 // --- Dark mode ---
 
@@ -180,8 +182,11 @@ onUnmounted(() => stopStatusPolling())
           <span v-if="status.running" class="text-amber-600 font-semibold">
             ▶ {{ status.kind }} 演奏中
           </span>
-          <button class="btn btn-primary text-xs py-1 px-2" @click="liveMode = true">
+          <button class="btn btn-primary text-xs py-1 px-2" @click="seqMode = false; liveMode = true">
             LIVE
+          </button>
+          <button class="btn btn-primary text-xs py-1 px-2" @click="liveMode = false; seqMode = true">
+            SEQ
           </button>
           <button class="btn text-xs py-1 px-2 bg-slate-500 text-white hover:bg-slate-600" @click="emergencyStop">
             全停止
@@ -326,5 +331,8 @@ onUnmounted(() => stopStatusPolling())
   </div>
 
   <!-- Live Mode overlay -->
-  <LiveMode v-if="liveMode" @exit="liveMode = false" />
+  <LiveMode v-if="liveMode" @exit="liveMode = false" @seq="liveMode = false; seqMode = true" />
+
+  <!-- Step Sequencer overlay -->
+  <StepSequencer v-if="seqMode" @exit="seqMode = false" @live="seqMode = false; liveMode = true" />
 </template>
