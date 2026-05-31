@@ -58,6 +58,7 @@ const cursor = ref(-1)
 const playing = ref(false)
 
 const trackIds = ref<string[]>([...DEFAULT_TRACKS])
+const disabled = ref<string[]>([])
 const editing = ref<Pattern>(emptyPattern(DEFAULT_TRACKS, 16))
 const queue = ref<Pattern[]>([])
 const banks = ref<Pattern[]>([])
@@ -76,6 +77,7 @@ function loadState() {
       if (typeof d.steps === 'number') steps.value = d.steps
       if (typeof d.stepsPerBeat === 'number') stepsPerBeat.value = d.stepsPerBeat
       if (Array.isArray(d.trackIds) && d.trackIds.length) trackIds.value = d.trackIds
+      if (Array.isArray(d.disabled)) disabled.value = d.disabled
       if (d.editing && typeof d.editing === 'object') {
         editing.value = d.editing as Pattern
         resizePattern(editing.value, steps.value)
@@ -95,7 +97,7 @@ function loadState() {
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     bpm: bpm.value, steps: steps.value, stepsPerBeat: stepsPerBeat.value,
-    trackIds: trackIds.value, editing: editing.value,
+    trackIds: trackIds.value, disabled: disabled.value, editing: editing.value,
   }))
 }
 
@@ -113,6 +115,26 @@ function toggleCell(id: string, i: number) {
   if (!editing.value[id]) editing.value[id] = Array(steps.value).fill(false)
   editing.value[id][i] = !editing.value[id][i]
   saveState()
+}
+
+// セルの描画クラス。連続する ON は内側の角を落とし隙間を詰めて、
+// 横一本の「長押しバー」として連結表示する。
+function cellClass(id: string, idx: number): string[] {
+  const on = isOn(id, idx)
+  const out: string[] = [
+    on ? padColorClass(getPad(id), true) : 'bg-slate-800 hover:bg-slate-700',
+    cursor.value === idx ? 'ring-2 ring-white z-10' : '',
+    idx % stepsPerBeat.value === 0 ? 'border-l border-slate-600' : '',
+  ]
+  if (!on) { out.push('rounded-sm'); return out }
+  const prevOn = idx > 0 && isOn(id, idx - 1)
+  const nextOn = idx < steps.value - 1 && isOn(id, idx + 1)
+  if (prevOn && nextOn) out.push('rounded-none')
+  else if (prevOn) out.push('rounded-l-none rounded-r-sm')
+  else if (nextOn) out.push('rounded-r-none rounded-l-sm')
+  else out.push('rounded-sm')
+  if (nextOn) out.push('-mr-0.5') // gap(0.5) を相殺して次セルと連結
+  return out
 }
 
 function clearEditing() {
@@ -144,6 +166,21 @@ function onBpmChange(e: Event) {
 
 function hasTrack(id: string): boolean {
   return trackIds.value.includes(id)
+}
+
+function isDisabled(id: string): boolean {
+  return disabled.value.includes(id)
+}
+
+function toggleDisabled(id: string) {
+  if (isDisabled(id)) {
+    disabled.value = disabled.value.filter((t) => t !== id)
+  } else {
+    disabled.value = [...disabled.value, id]
+    // 鳴っている最中なら即停止(再生中ループでは fireStep の差分送信が処理するが念のため)
+    if (activeHold.has(id)) { noteOff(id); activeHold.delete(id) }
+  }
+  saveState()
 }
 
 function toggleTrack(id: string) {
@@ -224,10 +261,15 @@ function fireStep() {
   const c = cursor.value
   const desired = new Set<string>()
   for (const id of Object.keys(cur)) {
+    if (isDisabled(id)) continue
     if (!cur[id][c]) continue
+    // 同一トラックで連続する ON は「1回の長押し」として扱う。
+    const startOfRun = c === 0 || !cur[id][c - 1]
     if (getPad(id).mode === 'pulse') {
-      noteOn(id) // 単発パルス(サーバ側でpulse処理)
+      // pulse はサーバ側で保持不可。連続区間は走り出しで1発のみ(毎ステップ連打しない)。
+      if (startOfRun) noteOn(id)
     } else {
+      // hold は連続区間を noteOn〜noteOff の長押しとして維持(差分送信に委ねる)。
       desired.add(id)
     }
   }
@@ -430,20 +472,18 @@ onUnmounted(() => {
       <!-- Grid (空き領域いっぱいに行を広げる) -->
       <div class="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1">
         <div v-for="id in trackIds" :key="id" class="flex items-stretch gap-1 flex-1 min-h-[2rem]">
-          <!-- Row label -->
-          <div :class="padColorClass(getPad(id), false)"
-               class="w-16 shrink-0 rounded text-center text-xs font-bold flex items-center justify-center text-slate-200">
+          <!-- Row label (クリックでトラック無効/有効) -->
+          <button :class="[padColorClass(getPad(id), false), isDisabled(id) ? 'opacity-40 line-through' : '']"
+                  class="w-16 shrink-0 rounded text-center text-xs font-bold flex items-center justify-center text-slate-200"
+                  @click="toggleDisabled(id)">
             {{ getPad(id).label }}
-          </div>
+          </button>
           <!-- Step cells -->
-          <div class="flex-1 grid gap-0.5" :style="{ gridTemplateColumns: `repeat(${steps}, 1fr)` }">
+          <div class="flex-1 grid gap-0.5" :class="isDisabled(id) ? 'opacity-30' : ''"
+               :style="{ gridTemplateColumns: `repeat(${steps}, 1fr)` }">
             <button v-for="i in steps" :key="i"
-                    :class="[
-                      isOn(id, i - 1) ? padColorClass(getPad(id), true) : 'bg-slate-800 hover:bg-slate-700',
-                      cursor === i - 1 ? 'ring-2 ring-white' : '',
-                      (i - 1) % stepsPerBeat === 0 ? 'border-l border-slate-600' : '',
-                    ]"
-                    class="h-full min-h-[1.75rem] rounded-sm transition-colors"
+                    :class="cellClass(id, i - 1)"
+                    class="h-full min-h-[1.75rem] transition-colors"
                     @click="toggleCell(id, i - 1)" />
           </div>
         </div>
@@ -462,7 +502,7 @@ onUnmounted(() => {
 
     <!-- Hint -->
     <div class="text-center text-xs text-slate-500 pb-1.5 shrink-0">
-      SPACE = 再生/停止 | 再生中の編集は次ループから反映 | ＋でキューに積むとバー頭で次へ切替 | ESC = 終了
+      SPACE = 再生/停止 | 行ラベルをタップでトラック無効/有効 | 連続ONは長押し扱い | 再生中の編集は次ループから反映 | ＋でキューに積むとバー頭で次へ切替 | ESC = 終了
     </div>
   </div>
 </template>
