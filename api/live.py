@@ -37,7 +37,14 @@ async def live_ws(ws: WebSocket):
             cmd_id = msg.get("id", "")
 
             if msg_type == "ping":
-                await ws.send_json({"type": "pong"})
+                # K-Line ワーカーが死んでいたら ping のタイミングで先回り復旧し、
+                # 実際の生存状態を pong に載せてフロントの接続表示と連動させる。
+                if not session.is_alive():
+                    try:
+                        session = start_session()
+                    except RuntimeError:
+                        pass
+                await ws.send_json({"type": "pong", "alive": session.is_alive()})
                 continue
             if msg_type == "exit":
                 should_stop = True

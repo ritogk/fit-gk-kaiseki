@@ -29,6 +29,17 @@ export function useWebSocket() {
         const msg = JSON.parse(e.data)
         if (msg.type === 'ready') {
           connected.value = true
+          error.value = null
+        } else if (msg.type === 'pong') {
+          // pong に載った K-Line ワーカーの生存状態で緑ランプを連動させる。
+          // WS は生きていてもワーカーが死んでいれば false になり、表示が実態と一致する。
+          if (msg.alive) {
+            connected.value = true
+            error.value = null
+          } else {
+            connected.value = false
+            error.value = 'K-Line未接続'
+          }
         } else if (msg.type === 'state') {
           active.value = new Set(msg.active as string[])
         } else if (msg.type === 'error') {
