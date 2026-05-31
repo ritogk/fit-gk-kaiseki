@@ -207,7 +207,14 @@ function armClock() {
 
 function tick() {
   cursor.value = (cursor.value + 1) % steps.value
-  if (cursor.value === 0) advanceQueue()
+  if (cursor.value === 0) {
+    if (queue.value.length > 1) {
+      advanceQueue() // 次が積まれていれば次パターンへ
+    } else if (queue.value.length === 1) {
+      // ループ中: 再生中の編集を次バーから反映し、以降ずっとその新パターンで鳴らす
+      queue.value = [clonePattern(editing.value)]
+    }
+  }
   fireStep()
 }
 
@@ -455,7 +462,7 @@ onUnmounted(() => {
 
     <!-- Hint -->
     <div class="text-center text-xs text-slate-500 pb-1.5 shrink-0">
-      SPACE = 再生/停止 | ＋でキューに積むとバー頭で次へ切替 (積まなければループ) | ESC = 終了
+      SPACE = 再生/停止 | 再生中の編集は次ループから反映 | ＋でキューに積むとバー頭で次へ切替 | ESC = 終了
     </div>
   </div>
 </template>
