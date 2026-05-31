@@ -13,6 +13,12 @@ body {
 .btn {
   @apply px-3 py-2 rounded-md font-medium transition-all cursor-pointer border-0;
 }
+/* オーバーレイ(LIVE/SEQ)ヘッダのボタン。コンパクトかつタップしやすい最小高を確保。 */
+.hdr-btn {
+  @apply px-3 py-1.5 rounded text-xs text-white whitespace-nowrap;
+  @apply min-h-9 inline-flex items-center justify-center;
+  @apply touch-manipulation active:scale-95 transition-transform select-none;
+}
 .btn:disabled {
   @apply opacity-50 cursor-not-allowed;
 }

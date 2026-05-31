@@ -336,23 +336,21 @@ onUnmounted(() => {
   <div class="fixed inset-0 bg-slate-900 text-white flex flex-col select-none z-50" style="touch-action: none">
 
     <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-2 bg-slate-800 shrink-0">
-      <div class="flex items-center gap-3">
-        <h1 class="text-lg font-bold">SEQ MODE</h1>
+    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-3 py-2 bg-slate-800 shrink-0">
+      <div class="flex items-center gap-2">
+        <h1 class="text-base sm:text-lg font-bold">SEQ</h1>
         <span :class="connected ? 'bg-green-500' : 'bg-red-500'" class="inline-block w-2.5 h-2.5 rounded-full" />
         <span v-if="!connected && !error" class="text-yellow-400 text-xs">接続中…</span>
-        <span v-if="error" class="text-red-400 text-xs">K-Lineデバイス未接続</span>
+        <span v-if="error" class="text-red-400 text-xs">K-Line未接続</span>
       </div>
-      <div class="flex items-center gap-2">
-        <button class="px-3 py-1 rounded text-xs bg-amber-600 hover:bg-amber-500 font-bold" @click="switchToLive">
-          ◀ LIVE
+      <div class="flex flex-wrap items-center justify-end gap-1.5">
+        <button class="hdr-btn bg-amber-600 hover:bg-amber-500 font-bold" @click="switchToLive">◀ LIVE</button>
+        <button class="hdr-btn bg-slate-700 hover:bg-slate-600" @click="toggleFullscreen">
+          {{ isFullscreen ? '⊙' : '⛶' }}
         </button>
-        <button class="px-3 py-1 rounded text-xs bg-slate-700 hover:bg-slate-600" @click="toggleFullscreen">
-          {{ isFullscreen ? '縮小' : '全画面' }}
-        </button>
-        <button class="px-3 py-1 rounded text-xs bg-amber-600 hover:bg-amber-500" @click="handleAllOff">ALL OFF</button>
-        <button class="px-3 py-1 rounded text-xs bg-slate-500 hover:bg-slate-400" @click="emergencyStop">全停止</button>
-        <button class="px-3 py-1 rounded text-xs bg-slate-600 hover:bg-slate-500" @click="handleExit">EXIT</button>
+        <button class="hdr-btn bg-amber-600 hover:bg-amber-500" @click="handleAllOff">ALL OFF</button>
+        <button class="hdr-btn bg-red-600 hover:bg-red-500 font-bold" @click="emergencyStop">全停止</button>
+        <button class="hdr-btn bg-slate-600 hover:bg-slate-500" @click="handleExit">EXIT</button>
       </div>
     </div>
 

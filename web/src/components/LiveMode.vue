@@ -183,8 +183,6 @@ function isLoopActive(id: string): boolean {
 
 // --- Monitor ---
 
-const showMonitor = ref(true)
-
 const monitorLights = computed(() => {
   const ids = new Set([...pressedPads.value])
   for (const id of loopPads.value) {
@@ -245,44 +243,35 @@ onUnmounted(() => {
        style="touch-action: none">
 
     <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-2 bg-slate-800 shrink-0">
-      <div class="flex items-center gap-3">
-        <h1 class="text-lg font-bold">LIVE MODE</h1>
+    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-3 py-2 bg-slate-800 shrink-0">
+      <div class="flex items-center gap-2">
+        <h1 class="text-base sm:text-lg font-bold">LIVE</h1>
         <span :class="connected ? 'bg-green-500' : 'bg-red-500'"
               class="inline-block w-2.5 h-2.5 rounded-full" />
         <span v-if="!connected && !error" class="text-yellow-400 text-xs">接続中…</span>
-        <span v-if="error" class="text-red-400 text-xs">K-Lineデバイス未接続</span>
+        <span v-if="error" class="text-red-400 text-xs">K-Line未接続</span>
       </div>
-      <div class="flex items-center gap-2">
-        <button class="px-3 py-1 rounded text-xs bg-indigo-600 hover:bg-indigo-500 font-bold"
-                @click="switchToSeq">
+      <div class="flex flex-wrap items-center justify-end gap-1.5">
+        <button class="hdr-btn bg-indigo-600 hover:bg-indigo-500 font-bold" @click="switchToSeq">
           SEQ ▶
         </button>
-        <button class="px-3 py-1 rounded text-xs bg-slate-700 hover:bg-slate-600"
-                @click="showMonitor = !showMonitor">
-          {{ showMonitor ? 'モニター非表示' : 'モニター表示' }}
+        <button class="hdr-btn bg-slate-700 hover:bg-slate-600" @click="toggleFullscreen">
+          {{ isFullscreen ? '⊙' : '⛶' }}
         </button>
-        <button class="px-3 py-1 rounded text-xs bg-slate-700 hover:bg-slate-600"
-                @click="toggleFullscreen">
-          {{ isFullscreen ? '縮小' : '全画面' }}
-        </button>
-        <button class="px-3 py-1 rounded text-xs bg-amber-600 hover:bg-amber-500"
-                @click="handleAllOff">
+        <button class="hdr-btn bg-amber-600 hover:bg-amber-500" @click="handleAllOff">
           ALL OFF
         </button>
-        <button class="px-3 py-1 rounded text-xs bg-slate-500 hover:bg-slate-400"
-                @click="emergencyStop">
+        <button class="hdr-btn bg-red-600 hover:bg-red-500 font-bold" @click="emergencyStop">
           全停止
         </button>
-        <button class="px-3 py-1 rounded text-xs bg-slate-600 hover:bg-slate-500"
-                @click="handleExit">
+        <button class="hdr-btn bg-slate-600 hover:bg-slate-500" @click="handleExit">
           EXIT
         </button>
       </div>
     </div>
 
     <!-- Monitor -->
-    <div v-if="showMonitor" class="flex justify-center py-2 bg-slate-850 shrink-0">
+    <div class="flex justify-center py-2 bg-slate-850 shrink-0">
       <CarFace :lights="monitorLights" />
     </div>
 
