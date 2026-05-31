@@ -25,10 +25,10 @@ const { apiCall } = useApi()
 const STOP_CELL = 'STOP'
 // 4段構成: 1段目=荷室灯+STOP / 2段目=ライト類(中央) / 3段目=ドア/チャープ / 4段目=ROOM+フロントワイパー/ウォッシャーをセットで固める / ホーン系は右下に縦並び
 const GRID_LAYOUT: (string | null)[][] = [
-  [null, null, null, 'cargo_light', null, null, null, STOP_CELL],
-  [null, 'low_beam', 'high_beam', 'hazard', 'position', 'fog', 'turn_left', 'turn_right'],
-  [null, null, 'lock', 'unlock', 'chirp', 'chirp_hold', 'horn_short', null],
-  [null, 'wiper_rear', 'washer_rear', 'wiper_front_hi', 'wiper_front_low', 'washer_front', 'room_lamp', 'horn'],
+  [null, null, 'cargo_light', null, null, null, STOP_CELL],
+  ['low_beam', 'high_beam', 'hazard', 'position', 'fog', 'turn_left', 'turn_right'],
+  [null, 'lock', 'unlock', 'chirp', 'chirp_hold', 'horn_short', null],
+  ['wiper_rear', 'washer_rear', 'wiper_front_hi', 'wiper_front_low', 'washer_front', 'room_lamp', 'horn'],
 ]
 
 // --- Interaction ---
@@ -243,30 +243,32 @@ onUnmounted(() => {
        style="touch-action: none">
 
     <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-3 py-2 bg-slate-800 shrink-0">
-      <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 px-3 py-2 bg-slate-800 shrink-0">
+      <div class="flex items-center gap-2 shrink-0">
         <h1 class="text-base sm:text-lg font-bold">LIVE</h1>
         <span :class="connected ? 'bg-green-500' : 'bg-red-500'"
               class="inline-block w-2.5 h-2.5 rounded-full" />
         <span v-if="!connected && !error" class="text-yellow-400 text-xs">接続中…</span>
         <span v-if="error" class="text-red-400 text-xs">K-Line未接続</span>
       </div>
-      <div class="flex flex-wrap items-center justify-end gap-1.5">
-        <button class="hdr-btn bg-indigo-600 hover:bg-indigo-500 font-bold" @click="switchToSeq">
-          SEQ ▶
-        </button>
-        <button class="hdr-btn bg-slate-700 hover:bg-slate-600" @click="toggleFullscreen">
-          {{ isFullscreen ? '⊙' : '⛶' }}
-        </button>
-        <button class="hdr-btn bg-amber-600 hover:bg-amber-500" @click="handleAllOff">
-          ALL OFF
-        </button>
-        <button class="hdr-btn bg-red-600 hover:bg-red-500 font-bold" @click="emergencyStop">
-          全停止
-        </button>
-        <button class="hdr-btn bg-slate-600 hover:bg-slate-500" @click="handleExit">
-          EXIT
-        </button>
+      <div class="hdr-scroll">
+        <div class="flex items-center justify-end gap-1.5 w-max ml-auto">
+          <button class="hdr-btn bg-indigo-600 hover:bg-indigo-500 font-bold" @click="switchToSeq">
+            SEQ ▶
+          </button>
+          <button class="hdr-btn bg-slate-700 hover:bg-slate-600" @click="toggleFullscreen">
+            {{ isFullscreen ? '⊙' : '⛶' }}
+          </button>
+          <button class="hdr-btn bg-amber-600 hover:bg-amber-500" @click="handleAllOff">
+            ALL OFF
+          </button>
+          <button class="hdr-btn bg-red-600 hover:bg-red-500 font-bold" @click="emergencyStop">
+            全停止
+          </button>
+          <button class="hdr-btn bg-slate-600 hover:bg-slate-500" @click="handleExit">
+            EXIT
+          </button>
+        </div>
       </div>
     </div>
 
@@ -298,7 +300,7 @@ onUnmounted(() => {
       <!-- Pad grid (Launchpad-mirrored: 3段, 中央=ウィンカー) -->
       <div class="flex-1 grid gap-3" style="grid-template-rows: repeat(4, 1fr)">
         <div v-for="(row, ri) in GRID_LAYOUT" :key="ri"
-             class="grid gap-3" style="grid-template-columns: repeat(8, 1fr)">
+             class="grid gap-3" style="grid-template-columns: repeat(7, 1fr)">
           <template v-for="(cell, ci) in row" :key="ci">
             <!-- empty slot -->
             <div v-if="cell === null" />
