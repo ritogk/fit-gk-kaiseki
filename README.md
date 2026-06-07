@@ -48,10 +48,19 @@ ECM(0x10) に対して以下を IO Control で叩けるところまで判明:
 
 ワイパー。 NRC=0x10 cluster は session 種別 / Security Access / IOCP / state byte / 別ECUアドレス / 全主要 vehicle state を試したが全部素通り。 純正 HDS が固有の preamble/auth を使ってる雰囲気で、 K-Line 系 aftermarket cable 単独だと届かない。 失敗の足跡は findings.md にまとめてある。
 
+（補足: フロント/リアワイパー・ウォッシャー自体は IOCP=0x05 で叩けている。上記「行き止まり」の NRC=0x10 cluster は別系統のゲートで、後日 ECM(0x10) IOControl の全LID×全IOCP マトリクスを回しても全256 IOCPで generalReject のまま=IOCPの探し漏れではないことを確定済み。）
+
+ミラー開閉・パワーウインドウの「読み書き」。 これらは MICU が監視する B-CAN 信号で、 K-Line 診断経由では到達できない。 ECM(0x10) にも MICU(0x72) 直接にも露出せず、 MICU は読み取りサービス(SID 0x21/0x22)も診断セッション(SID 0x10)も K-Line では全拒否。 実現には CAN インターフェース(B-CAN/F-CAN UDS)が要る。 詳細は findings.md の 2026-05-31 追記。
+
+## 後日の全マトリクス探索 (2026-05-31)
+
+ECM(0x10) の IOControl を **全LID 0x00-0x27 × 全IOCP 0x00-0xFF** で総当り(state=0固定・ホーン除外・取りこぼし0方式)。 既知マップが網羅的だったことを再確認しつつ、 新規に **LID 0x13 / IOCP 0x3C** を発見。 ただし PR は返るが(status 0x05)、 エンジンON/OFFいずれでも観測可能な出力を駆動せず、 実用機能としては未確定(非作動の内部制御の疑い)。 スキャナは `research/iocontrol_matrix.py`。
+
 ## ハード
 
 - Honda Fit GK5 RS MT (型式 GK5)
 - アリエクの FT232RL + L9637D OBD2 USB ケーブル — ELM327 エミュではなく、 純粋な K-Line トランシーバ
+- CAN アダプタ: Geschwister Schneider / candleLight 系 (`gs_usb`, USB ID `1d50:606f`)。 Linux カーネルが `can0` としてネイティブ認識する SocketCAN デバイス (slcan 不要)
 - Linux ホスト (Ubuntu/Debian で動作確認)
 
 ## 起動
@@ -77,6 +86,54 @@ sudo usermod -aG dialout $USER && newgrp dialout
 別ポートなら `KLINE_PORT=/dev/ttyUSB1 ./run.sh`。
 
 ブラウザで `http://127.0.0.1:8000/` 開けば UI、 `/docs` で Swagger。
+
+## CAN 接続 (B-CAN / F-CAN)
+
+K-Line で届かない領域（ミラー/パワーウインドウ等の B-CAN 信号）を狙うための CAN 側のつなぎ方。 アダプタによって 2 パターンある。
+
+### パターン A: ネイティブ SocketCAN ← 本リポジトリで使用中
+
+`gs_usb` (candleLight 系) アダプタはカーネルが `can0` として認識するので、 ビットレートを指定して up するだけ。 `slcand` は不要。
+
+```bash
+# 認識確認 (lsusb に "Geschwister Schneider CAN adapter"、ip link に can0 が出る)
+lsusb | grep -i can
+ip -d link show can0
+
+# B-CAN (ミラー/パワーウインドウ。Honda 低速 = 125k)
+sudo ip link set can0 up type can bitrate 125000
+# F-CAN (パワートレイン/シャシ。高速 = 500k)
+sudo ip link set can0 up type can bitrate 500000
+
+candump -t d can0                 # 受信
+cansend can0 '123#DEADBEEF'       # 送信
+sudo ip link set can0 down        # 終了 / ビットレート変更前
+```
+
+### パターン B: slcan (FTDI シリアル型 CANUSB アダプタの場合 / 本機では不要)
+
+```bash
+sudo slcand -o -c -s4 /dev/ttyUSBx can0   # -s4=125k, -s6=500k
+sudo ip link set can0 up
+```
+
+### ビットレートの見分け方
+
+`ip link` を up した後 `ip -s -d link show can0` で状態を見る:
+
+- **`ERROR-ACTIVE` でフレームが流れる** → ビットレート正解。バスに乗れている。
+- **`ERROR-PASSIVE` / `error-pass` カウンタが激増、RX dropped が増える** → バスは生きているがビットレートが不一致。 down してから別のレートで up し直す。
+- **完全に無音 (`candump` が何も出ない)** → 配線未接続、あるいは挿している箇所にそのバスが来ていない。
+
+実測: F-CAN は **500k** で `091 / 130 / 140 / 158 / 17C / 1A4 / 1A6 / 1DC / 320 / 324 / 328` 等が流れることを確認済み。 B-CAN は **125k**（未確定、要検証）。 Honda は系統によって 33.3k (`83333`) のこともある。
+
+### ログ記録
+
+```bash
+candump -l -L can0   # candump-<日時>.log に保存 (Ctrl+C で停止)。canplayer で再生可
+```
+
+> 注意: B-CAN は OBD コネクタに出ていない車種があり、 その場合は車内ハーネス（MICU 近辺）への割り込みが必要。
 
 ## 同時点灯の仕組み
 
