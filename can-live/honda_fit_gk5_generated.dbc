@@ -1,0 +1,175 @@
+VERSION ""
+
+NS_ :
+
+BS_:
+
+BU_: BCM ECM MICU Meter VSA
+
+BO_ 57 GW_Heartbeat_039: 3 BCM
+ SG_ GW_HB_Status : 7|16@0+ (1,0) [0|65535] "" Vector__XXX
+ SG_ GW_HB_Counter : 23|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 145 Engine_091: 8 ECM
+ SG_ ENG_StatusByte : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ENG_ThrottleByte : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ENG_RPM_Raw : 23|16@0+ (1,0) [0|65535] "raw" Vector__XXX
+ SG_ ENG_Load_Raw : 39|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ENG_Reserved1 : 47|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ ENG_Reserved2 : 55|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ ENG_RollingCnt : 63|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 304 Throttle_130: 8 ECM
+ SG_ THR_ModeFlags : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ THR_Byte1 : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ THR_Byte2 : 23|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ THR_AccelPos : 31|8@0+ (0.392,0) [0|100] "%" Vector__XXX
+ SG_ THR_Byte4 : 39|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ THR_Byte5 : 47|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ THR_MsgType : 55|8@0+ (1,0) [0|5] "" Vector__XXX
+ SG_ THR_RollingCnt : 63|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 342 Steering_156: 6 ECM
+ SG_ STR_Angle : 7|16@0- (0.1,0) [-3276|3276] "deg" Vector__XXX
+ SG_ STR_Byte2 : 23|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ STR_Rate : 31|16@0- (0.1,0) [-3276|3276] "deg" Vector__XXX
+ SG_ STR_RollingCnt : 47|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 344 Unknown_158: 8 VSA
+ SG_ U158_Word0 : 7|16@0+ (1,0) [0|65535] "" Vector__XXX
+ SG_ U158_Byte2 : 23|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ U158_Byte3 : 31|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ U158_Word4 : 39|16@0+ (1,0) [0|65535] "" Vector__XXX
+ SG_ U158_Flags : 55|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ U158_RollingCnt : 63|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 380 Engine_17C: 8 ECM
+ SG_ ET_Byte0 : 7|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ ET_Byte1 : 15|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ ENG_RPM : 23|16@0+ (1,0) [0|9000] "rpm" Vector__XXX
+ SG_ ET_StatusFlag : 39|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ET_Byte5 : 47|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ ET_Byte6 : 55|8@0+ (1,0) [0|32] "" Vector__XXX
+ SG_ ET_RollingCnt : 63|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 420 Brake_1A4: 8 VSA
+ SG_ BRK_State : 7|8@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ BRK_Byte1 : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ BRK_Padding : 23|40@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ BRK_RollingCnt : 63|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 422 Transmission_1A6: 8 ECM
+ SG_ TRN_Status : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ TRN_Byte1 : 15|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ TRN_Flag : 23|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ TRN_GearPos : 31|8@0+ (1,0) [0|255] "raw" Vector__XXX
+ SG_ TRN_Param : 39|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ TRN_Active : 47|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ TRN_Byte6 : 55|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ TRN_Counter : 63|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 427 CruiseCtrl_1AB: 3 ECM
+ SG_ CC_Flags : 7|8@0+ (1,0) [0|9] "" Vector__XXX
+ SG_ CC_Value : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ CC_RollingCnt : 23|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 428 VSA_Status_1AC: 8 VSA
+ SG_ VSA_Neutral : 7|16@0+ (1,0) [0|65535] "" Vector__XXX
+ SG_ VSA_Padding : 23|40@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ VSA_RollingCnt : 63|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 432 ABS_WheelSpd_1B0: 7 VSA
+ SG_ ABS_Byte0 : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ABS_Status : 15|8@0+ (1,0) [0|255] "flag" Vector__XXX
+ SG_ ABS_Padding : 23|24@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ ABS_Byte5 : 47|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ABS_Counter : 55|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 464 WheelSpeeds_1D0: 8 VSA
+ SG_ WS_FL : 7|16@0+ (0.01,0) [0|655] "km/h" Vector__XXX
+ SG_ WS_FR : 23|16@0+ (0.01,0) [0|655] "km/h" Vector__XXX
+ SG_ WS_RL : 39|16@0+ (0.01,0) [0|655] "km/h" Vector__XXX
+ SG_ WS_RR_Counter : 55|16@0+ (1,0) [0|65535] "" Vector__XXX
+
+BO_ 476 EngineTempMirror_1DC: 7 ECM
+ SG_ ETM_Const : 7|8@0+ (1,0) [0|2] "" Vector__XXX
+ SG_ ETM_CoolantTemp : 15|16@0+ (0.1,-40) [-40|215] "C" Vector__XXX
+ SG_ ETM_Padding : 31|24@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ ETM_RollingCnt : 55|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 490 BrakePressure_1EA: 8 VSA
+ SG_ BP_Pressure1 : 7|16@0+ (1,0) [0|65535] "raw" Vector__XXX
+ SG_ BP_Pressure2 : 23|16@0+ (1,0) [0|65535] "raw" Vector__XXX
+ SG_ BP_Padding : 39|24@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ BP_RollingCnt : 63|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 493 BrakeStatus_1ED: 3 VSA
+ SG_ BS_Byte0 : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ BS_Byte1 : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ BS_RollingCnt : 23|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 507 Heartbeat_1FB: 1 BCM
+ SG_ HB_Counter : 7|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 545 Meter_221: 4 Meter
+ SG_ MTR_DisplayVal : 7|8@0+ (1,0) [0|255] "raw" Vector__XXX
+ SG_ MTR_Byte1 : 15|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ MTR_Const : 23|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ MTR_Counter : 31|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 597 Clock_255: 8 BCM
+ SG_ CLK_Field0 : 7|8@0+ (1,0) [0|13] "" Vector__XXX
+ SG_ CLK_Field1 : 15|8@0+ (1,0) [0|13] "" Vector__XXX
+ SG_ CLK_Field2 : 23|8@0+ (1,0) [0|13] "" Vector__XXX
+ SG_ CLK_Field3 : 31|8@0+ (1,0) [0|13] "" Vector__XXX
+ SG_ CLK_Const4 : 39|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ CLK_Const5 : 47|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ CLK_FreeRun6 : 55|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ CLK_FreeRun7 : 63|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 660 Odometer_294: 8 Meter
+ SG_ ODO_Flag : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ODO_Const : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ODO_Byte2 : 23|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ODO_Value : 31|24@0+ (1,0) [0|16777215] "km raw" Vector__XXX
+ SG_ ODO_Byte6 : 55|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ODO_Counter : 63|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 661 TripMeter_295: 4 Meter
+ SG_ TRP_Byte0 : 7|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ TRP_Byte1 : 15|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ TRP_Byte2 : 23|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ TRP_Counter : 31|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 804 Battery_324: 8 ECM
+ SG_ BAT_Voltage : 7|16@0+ (0.01,0) [0|655] "V" Vector__XXX
+ SG_ BAT_Byte2 : 23|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ BAT_Byte3 : 31|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ BAT_Padding : 39|24@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ BAT_RollingCnt : 63|6@0+ (1,0) [0|63] "" Vector__XXX
+
+BO_ 884 OutsideTemp_374: 8 BCM
+ SG_ OT_Temp : 7|8@0+ (0.5,-40) [-40|87.5] "C" Vector__XXX
+ SG_ OT_Padding : 15|56@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 918 AC_Climate_396: 8 BCM
+ SG_ AC_Byte0 : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ AC_Byte1 : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ AC_Status : 23|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ AC_Temp : 31|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ AC_Mode : 39|8@0+ (1,0) [0|2] "" Vector__XXX
+ SG_ AC_Padding : 47|24@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1036 VIN_40C: 8 ECM
+ SG_ VIN_Seq : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ VIN_Char1 : 15|8@0+ (1,0) [0|255] "ASCII" Vector__XXX
+ SG_ VIN_Char2 : 23|8@0+ (1,0) [0|255] "ASCII" Vector__XXX
+ SG_ VIN_Char3 : 31|8@0+ (1,0) [0|255] "ASCII" Vector__XXX
+ SG_ VIN_Char4 : 39|8@0+ (1,0) [0|255] "ASCII" Vector__XXX
+ SG_ VIN_Char5 : 47|8@0+ (1,0) [0|255] "ASCII" Vector__XXX
+ SG_ VIN_Char6 : 55|8@0+ (1,0) [0|255] "ASCII" Vector__XXX
+ SG_ VIN_Char7 : 63|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 1115 MICU_45B: 2 MICU
+ SG_ MICU_Status : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ MICU_Counter : 15|8@0+ (1,0) [0|255] "" Vector__XXX

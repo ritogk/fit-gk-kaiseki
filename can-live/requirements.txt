@@ -1,0 +1,4 @@
+# can-live 専用の追加依存（共有 .venv にインストール）。
+# fastapi / uvicorn[standard] はリポジトリ root の requirements.txt 側で導入済み。
+python-can>=4.3
+cantools>=39
