@@ -9,5 +9,5 @@ __pycache__/
 *.egg-info/
 .idea/
 .vscode/
-launchpad/launchpad-kb
+kline-app/launchpad/launchpad-kb
 *.tsbuildinfo

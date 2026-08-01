@@ -7,6 +7,8 @@
 # or run `sudo chmod 666 /dev/ttyUSB0` once after each USB reconnect.
 set -euo pipefail
 cd "$(dirname "$0")"
+# venv はリポジトリルート共有 (can-live と同居)
+ROOT="$(cd .. && pwd)"
 
 kill_port() {
   local pid
@@ -21,5 +23,5 @@ kill_port() {
 kill_port 8000
 kill_port 5173
 
-.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload --reload-include '*.py' &
+"$ROOT/.venv/bin/uvicorn" api.main:app --host 0.0.0.0 --port 8000 --reload --reload-include '*.py' &
 cd web && npx vite --host 0.0.0.0 --port 5173
