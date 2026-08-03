@@ -1,5 +1,8 @@
 # 結線・電源系統
 
+> **17ch全灯個別制御(最終形)の完全結線図**: [full-wiring-17ch.html](full-wiring-17ch.html) — ブラウザで開く。生成元は [gen_full_wiring.py](gen_full_wiring.py)(図の修正はHTMLを直接編集せず、このスクリプトを編集して再実行する)。公開版: https://claude.ai/code/artifact/1dcc0792-d78f-4668-a2af-c1c625573fd2
+> 以下の本文は動作確認済みのCH1(フォグ×BTS7960)構成の記録。
+
 ```
 [操作系] → ESP32-S3 → BTS7960 → フォグランプ
                 ↑
