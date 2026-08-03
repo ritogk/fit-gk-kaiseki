@@ -337,6 +337,22 @@ S.append(f'<text class="t-lab" x="44" y="1360" fill="var(--w-pwm)" transform="ro
 svg = (f'<svg id="schematic" viewBox="0 0 {W} {H}" role="img" aria-label="全パーツ完全結線図">'
        + "".join(S) + "</svg>")
 
+# 印刷用: 同じ描画内容をA4横4ページに分割して見せる(切断位置はch行の隙間)
+# A4横(余白9mm)の描画域279x192mm → 1ページに入る高さ = 1660*192/279 ≈ 1142px
+PRINT_CUTS = [0, 974, 2026, 3124, H]   # 前ch3/4間・前ユニット末尾・後ch4/5間
+PP_NOTES = ["上段電源・操作系 + 前ユニット ch1-3", "前ユニット ch4-10",
+            "前ユニット アレイ/GND + 後ユニット ch1-4", "後ユニット ch5-7 + アレイ/GND"]
+body_all = "".join(S)
+pp = []
+for pi in range(4):
+    y0p, y1p = PRINT_CUTS[pi], PRINT_CUTS[pi + 1]
+    pp.append(
+        f'<div class="pp"><div class="pp-head">全パーツ完全結線図 {pi+1}/4 — {PP_NOTES[pi]}'
+        f'<span>ページ端で切れた縦線(B+・IG・純正線・CAN・コイル)は前後のページへ続く</span></div>'
+        f'<svg viewBox="0 {y0p} {W} {y1p-y0p}" role="img" aria-label="完全結線図 {pi+1}/4">'
+        + body_all + '</svg></div>')
+print_pages = '<div class="print-pages">' + "".join(pp) + "</div>"
+
 # ============ HTML ============
 CSS = """
   :root {
@@ -442,6 +458,37 @@ CSS = """
   .danger li { margin: 4px 0; font-size: 13.5px; }
   .danger li::marker { color: var(--danger); }
   footer { margin-top: 48px; font-size: 12px; color: var(--muted); }
+  .print-pages { display: none; }
+  @page { size: A4 landscape; margin: 9mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root[data-theme="light"] {
+      --bg: #fff; --surface: #fff; --box: #fff; --box-line: #999;
+      --ink: #111; --muted: #444; --line: #bbb; --accent: #8a6010; --dot: #fff;
+      --shadow: none;
+      --w-pwm: #2f6fb2; --w-en: #2f8659; --w-is: #6d48ae; --w-vcc: #a86a10;
+      --w-gnd: #666; --w-pos: #b23a30; --w-neg: #333;
+      --danger: #a03026; --danger-bg: #fff; --danger-line: #bbb;
+    }
+    body { background: #fff; font-size: 12.5px; }
+    .wrap { max-width: none; padding: 0; }
+    .panel { display: none; }
+    .print-pages { display: block; }
+    .pp { break-before: page; }
+    .pp-head { display: flex; justify-content: space-between; align-items: baseline;
+      font: 700 12px "Hiragino Sans", sans-serif; color: #333; margin: 0 0 4px; }
+    .pp-head span { font-weight: 400; font-size: 10px; color: #777; }
+    .pp svg { display: block; width: 100%; height: auto; }
+    h2 { break-before: page; margin-top: 0; }
+    h2, .hint { break-after: avoid; }
+    .tbl-wrap, table { min-width: 0; }
+    tr { break-inside: avoid; }
+    thead { display: table-header-group; }
+    .danger, .legend { break-inside: avoid; }
+    h1 { font-size: 20px; }
+    .lead { font-size: 11.5px; }
+    .veil, .pop { display: none !important; }
+    a { color: inherit; text-decoration: none; }
+  }
 """
 
 DATA_JS = """
@@ -608,7 +655,7 @@ BODY_TOP = """
 
   <h2>完全結線図(縦に長い。横スクロール・クリック対応)</h2>
   <p class="hint"><b>リレーは灯具毎に1個・計17個に変更。</b>純正分岐の下流で切らないと「1灯=1ch」と両立しないため。
-  緑=コイル駆動 / 紫=純正入力の監視 / 青破線=PWM / 橙=12V電源・純正線 / 赤=自作出力。</p>
+  緑=コイル駆動 / 紫=純正入力の監視 / 青破線=PWM / 橙=12V電源・純正線 / 赤=自作出力。<br><b>実装方式は2026-08-03に変更あり</b>: 切替リレー+コイル駆動は既製8chリレーモジュール(ドライバ内蔵・TBD62083不要)で実装する。本図のリレー・アレイ表記は論理接続として読み、実体配置は board-layout-17ch.html を正とする。</p>
 """
 
 BODY_BOTTOM = """
@@ -655,7 +702,7 @@ BODY_BOTTOM = """
     </ul>
   </div>
 
-  <footer>リレー数は灯具毎17個に確定(純正分岐下流でのカットが1灯=1chの前提)。純正分岐の実配置は実車ハーネス調査で最終確認。2026-08-02。</footer>
+  <footer>リレー数は灯具毎17個に確定(純正分岐下流でのカットが1灯=1chの前提)。純正分岐の実配置は実車ハーネス調査で最終確認。2026-08-02(印刷対応 2026-08-03: A4横4分割・PDF版 full-wiring-17ch.pdf)。</footer>
 </div>
 
 <div id="veil" class="veil" hidden></div>
@@ -672,10 +719,13 @@ BODY_BOTTOM = """
 </div>
 """
 
-html = ("<title>全パーツ完全結線図 — 17ch+割り込みカット</title>\n"
+html = ('<!doctype html>\n<html lang="ja">\n<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        "<title>全パーツ完全結線図 — 17ch+割り込みカット</title>\n"
         "<style>" + CSS + "</style>\n"
         + BODY_TOP
         + '<div class="panel">' + svg + "</div>\n"
+        + print_pages + "\n"
         + BODY_BOTTOM
         + "<script>" + POPUP_JS + "</script>\n")
 
