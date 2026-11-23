@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2系統 計測回路</title>
+<style>
+  body { margin: 0; background: #fafaf7; color: #1f2328;
+    font: 15px/1.7 -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 22px; margin: 4px 0; }
+  h2 { font-size: 17px; margin: 28px 0 6px; }
+  .card { background: #fff; border: 1px solid #d8dce2; border-radius: 10px; padding: 12px; overflow-x: auto; }
+  svg { display: block; width: 100%; height: auto; }
+  svg text { font-family: -apple-system, "Hiragino Sans", sans-serif; }
+  table { border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+  th, td { border: 1px solid #d8dce2; padding: 5px 10px; text-align: left; }
+  th { background: #f3f4f6; }
+  .warn { background: #ffebe9; border-left: 4px solid #d1242f; padding: 8px 12px; border-radius: 6px; margin-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+<h1>2系統 計測回路(led_sig_scope 用)</h1>
+<p>部品は抵抗4本だけ。100kΩと22kΩを2本ずつ使う。AとBは同じ回路である。</p>
+
+<h2>回路図</h2>
+<div class="card">
+<svg viewBox="0 0 880 300">
+  <!-- CH A -->
+  <g>
+    <circle cx="50" cy="70" r="8" fill="#8250df"/>
+    <text x="50" y="48" text-anchor="middle" font-size="14" font-weight="700" fill="#8250df">測る線A</text>
+    <line x1="58" y1="70" x2="170" y2="70" stroke="#1f2328" stroke-width="2.5"/>
+    <rect x="170" y="56" width="110" height="28" rx="4" fill="#fff8c5" stroke="#bc4c00" stroke-width="2"/>
+    <text x="225" y="76" text-anchor="middle" font-size="14" font-weight="700">100kΩ</text>
+    <line x1="280" y1="70" x2="620" y2="70" stroke="#1f2328" stroke-width="2.5"/>
+    <circle cx="380" cy="70" r="5"/>
+    <line x1="380" y1="70" x2="380" y2="110" stroke="#1f2328" stroke-width="2.5"/>
+    <rect x="366" y="110" width="28" height="80" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+    <text x="402" y="155" font-size="14" font-weight="700">22kΩ</text>
+    <line x1="380" y1="190" x2="380" y2="260" stroke="#1f2328" stroke-width="2.5"/>
+    <rect x="620" y="52" width="120" height="36" rx="6" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+    <text x="680" y="76" text-anchor="middle" font-size="15" font-weight="700">GPIO1</text>
+  </g>
+  <!-- CH B -->
+  <g>
+    <circle cx="50" cy="130" r="8" fill="#bc4c00"/>
+    <text x="50" y="158" text-anchor="middle" font-size="14" font-weight="700" fill="#bc4c00">測る線B</text>
+    <line x1="58" y1="130" x2="170" y2="130" stroke="#1f2328" stroke-width="2.5"/>
+    <rect x="170" y="116" width="110" height="28" rx="4" fill="#fff8c5" stroke="#bc4c00" stroke-width="2"/>
+    <text x="225" y="136" text-anchor="middle" font-size="14" font-weight="700">100kΩ</text>
+    <path d="M280,130 L340,130 M360,130 L400,130 M420,130 L620,130" stroke="#1f2328" stroke-width="2.5" fill="none"/>
+    <path d="M340,130 Q350,118 360,130" stroke="#1f2328" stroke-width="2.5" fill="none"/>
+    <path d="M400,130 Q410,118 420,130" stroke="#1f2328" stroke-width="2.5" fill="none" opacity="0"/>
+    <line x1="360" y1="130" x2="420" y2="130" stroke="#1f2328" stroke-width="2.5"/>
+    <circle cx="520" cy="130" r="5"/>
+    <line x1="520" y1="130" x2="520" y2="150" stroke="#1f2328" stroke-width="2.5"/>
+    <rect x="506" y="150" width="28" height="80" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+    <text x="542" y="195" font-size="14" font-weight="700">22kΩ</text>
+    <line x1="520" y1="230" x2="520" y2="260" stroke="#1f2328" stroke-width="2.5"/>
+    <rect x="620" y="112" width="120" height="36" rx="6" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+    <text x="680" y="136" text-anchor="middle" font-size="15" font-weight="700">GPIO2</text>
+  </g>
+  <!-- GND -->
+  <circle cx="50" cy="260" r="8" fill="#1f2328"/>
+  <text x="50" y="288" text-anchor="middle" font-size="14" font-weight="700">車のGND</text>
+  <line x1="58" y1="260" x2="620" y2="260" stroke="#1f2328" stroke-width="2.5"/>
+  <rect x="620" y="242" width="120" height="36" rx="6" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+  <text x="680" y="266" text-anchor="middle" font-size="15" font-weight="700">GND</text>
+  <text x="810" y="170" text-anchor="middle" font-size="14" font-weight="700" fill="#1a7f37">ESP32-S3</text>
+  <rect x="610" y="40" width="140" height="250" rx="10" fill="none" stroke="#1a7f37" stroke-dasharray="5 4"/>
+  <text x="350" y="112" font-size="11" fill="#5b6470" text-anchor="end">Bの線は</text>
+  <text x="350" y="100" font-size="11" fill="#5b6470" text-anchor="end"> </text>
+</svg>
+</div>
+<p style="font-size:13px;color:#5b6470">線Bは線Aの22kΩをまたいでいるだけで、つながっていない。</p>
+
+<h2>ブレッドボード</h2>
+<p>縦の1列(5穴)は中でつながっている。下の青い横1列はGNDレールで、端から端までつながっている。</p>
+<div class="card">
+<svg viewBox="0 0 880 400">
+  <rect x="150" y="60" width="520" height="300" rx="10" fill="#f6f8fa" stroke="#8c959f"/>
+  <!-- column guides -->
+  <g stroke="#d0d7de" stroke-width="14" stroke-linecap="round">
+    <line x1="220" y1="110" x2="220" y2="250"/><line x1="320" y1="110" x2="320" y2="250"/>
+    <line x1="450" y1="110" x2="450" y2="250"/><line x1="550" y1="110" x2="550" y2="250"/>
+  </g>
+  <g font-size="12" fill="#5b6470" text-anchor="middle">
+    <text x="220" y="100">列1</text><text x="320" y="100">列2</text><text x="450" y="100">列3</text><text x="550" y="100">列4</text>
+  </g>
+  <!-- GND rail -->
+  <line x1="170" y1="320" x2="650" y2="320" stroke="#0969da" stroke-width="12" stroke-linecap="round" opacity=".35"/>
+  <text x="410" y="348" text-anchor="middle" font-size="13" fill="#0969da" font-weight="700">GNDレール(−)</text>
+  <!-- 100k A: col1 → col2 -->
+  <line x1="220" y1="150" x2="320" y2="150" stroke="#8c959f" stroke-width="2.5"/>
+  <rect x="242" y="140" width="56" height="20" rx="9" fill="#fff8c5" stroke="#bc4c00" stroke-width="2"/>
+  <text x="270" y="155" text-anchor="middle" font-size="11" font-weight="700">100k</text>
+  <!-- 22k A: col2 → GND -->
+  <line x1="320" y1="230" x2="320" y2="320" stroke="#8c959f" stroke-width="2.5"/>
+  <rect x="310" y="254" width="20" height="50" rx="9" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+  <text x="336" y="284" font-size="11" font-weight="700">22k</text>
+  <!-- 100k B: col3 → col4 -->
+  <line x1="450" y1="150" x2="550" y2="150" stroke="#8c959f" stroke-width="2.5"/>
+  <rect x="472" y="140" width="56" height="20" rx="9" fill="#fff8c5" stroke="#bc4c00" stroke-width="2"/>
+  <text x="500" y="155" text-anchor="middle" font-size="11" font-weight="700">100k</text>
+  <!-- 22k B -->
+  <line x1="550" y1="230" x2="550" y2="320" stroke="#8c959f" stroke-width="2.5"/>
+  <rect x="540" y="254" width="20" height="50" rx="9" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+  <text x="566" y="284" font-size="11" font-weight="700">22k</text>
+  <!-- inputs -->
+  <path d="M40,40 L220,40 L220,120" fill="none" stroke="#8250df" stroke-width="4"/>
+  <circle cx="40" cy="40" r="7" fill="#8250df"/>
+  <text x="52" y="30" font-size="13" font-weight="700" fill="#8250df">測る線A → 列1</text>
+  <path d="M40,200 L120,200 L120,20 L450,20 L450,120" fill="none" stroke="#bc4c00" stroke-width="4"/>
+  <circle cx="40" cy="200" r="7" fill="#bc4c00"/>
+  <text x="20" y="225" font-size="13" font-weight="700" fill="#bc4c00">測る線B → 列3</text>
+  <path d="M40,320 L170,320" fill="none" stroke="#1f2328" stroke-width="4"/>
+  <circle cx="40" cy="320" r="7" fill="#1f2328"/>
+  <text x="20" y="345" font-size="13" font-weight="700">車のGND</text>
+  <!-- outputs -->
+  <path d="M320,190 L320,190 L390,190 L390,380 L720,380 L720,150 L745,150" fill="none" stroke="#1a7f37" stroke-width="4"/>
+  <path d="M550,190 L700,190 L700,210 L745,210" fill="none" stroke="#1a7f37" stroke-width="4"/>
+  <path d="M650,320 L700,320 L700,270 L745,270" fill="none" stroke="#1f2328" stroke-width="4"/>
+  <rect x="745" y="110" width="120" height="200" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+  <text x="805" y="132" text-anchor="middle" font-size="13" font-weight="700">ESP32-S3</text>
+  <circle cx="757" cy="150" r="5" fill="#1a7f37"/><text x="768" y="155" font-size="13">GPIO1 (A)</text>
+  <circle cx="757" cy="210" r="5" fill="#1a7f37"/><text x="768" y="215" font-size="13">GPIO2 (B)</text>
+  <circle cx="757" cy="270" r="5" fill="#1f2328"/><text x="768" y="275" font-size="13">GND</text>
+  <text x="355" y="180" font-size="11" fill="#1a7f37">列2 → GPIO1</text>
+  <text x="590" y="180" font-size="11" fill="#1a7f37">列4 → GPIO2</text>
+</svg>
+</div>
+
+<table>
+  <tr><th>つなぐもの</th><th>差す場所</th></tr>
+  <tr><td>測る線A</td><td>列1</td></tr>
+  <tr><td>100kΩ(1本目)</td><td>列1 と 列2</td></tr>
+  <tr><td>22kΩ(1本目)</td><td>列2 と GNDレール</td></tr>
+  <tr><td>GPIO1</td><td>列2</td></tr>
+  <tr><td>測る線B</td><td>列3</td></tr>
+  <tr><td>100kΩ(2本目)</td><td>列3 と 列4</td></tr>
+  <tr><td>22kΩ(2本目)</td><td>列4 と GNDレール</td></tr>
+  <tr><td>GPIO2</td><td>列4</td></tr>
+  <tr><td>車のGND、ESP32のGND</td><td>GNDレール</td></tr>
+</table>
+
+<h2>ESP32側でつなぐピン</h2>
+<p>つなぐのは GPIO1、GPIO2、GND の3本だけである。3V3ピンは使わない。ESP32の電源は、MacとつなぐUSBケーブルから取る。GPIO2にBTS7960の電流センス(R_IS)の線がつながっている場合は、計測の間だけ外す。</p>
+<div class="warn">測る線を、列2や列4(GPIO側)へ直接差さない。100kΩを通さずに12VがGPIOへ入り、ESP32が壊れる。</div>
+<h2>抵抗の色の帯</h2>
+<p>少し離れている帯(誤差の帯)を右にして、左から読む。色が見分けにくいときは、テスターの抵抗レンジで測る。</p>
+<div class="card"><svg viewBox="0 0 880 250"><text x="20" y="72" font-size="17" font-weight="700">100kΩ</text><text x="20" y="182" font-size="17" font-weight="700">22kΩ</text><line x1="120" y1="62" x2="440" y2="62" stroke="#8c959f" stroke-width="4"/><rect x="150" y="40" width="260" height="44" rx="16" fill="#e8d5a8" stroke="#8c7a4a" stroke-width="1.5"/><rect x="180" y="40" width="16" height="44" fill="#7b4a12"/><text x="188" y="102" text-anchor="middle" font-size="13">茶</text><rect x="222" y="40" width="16" height="44" fill="#111"/><text x="230" y="102" text-anchor="middle" font-size="13">黒</text><rect x="264" y="40" width="16" height="44" fill="#f2c500"/><text x="272" y="102" text-anchor="middle" font-size="13">黄</text><rect x="368" y="40" width="16" height="44" fill="#c9a227"/><text x="376" y="102" text-anchor="middle" font-size="13">金</text><text x="280.0" y="30" text-anchor="middle" font-size="13" fill="#5b6470">帯4本(誤差5%)</text><line x1="500" y1="62" x2="820" y2="62" stroke="#8c959f" stroke-width="4"/><rect x="530" y="40" width="260" height="44" rx="16" fill="#e8d5a8" stroke="#8c7a4a" stroke-width="1.5"/><rect x="560" y="40" width="16" height="44" fill="#7b4a12"/><text x="568" y="102" text-anchor="middle" font-size="13">茶</text><rect x="594" y="40" width="16" height="44" fill="#111"/><text x="602" y="102" text-anchor="middle" font-size="13">黒</text><rect x="628" y="40" width="16" height="44" fill="#111"/><text x="636" y="102" text-anchor="middle" font-size="13">黒</text><rect x="662" y="40" width="16" height="44" fill="#f28c00"/><text x="670" y="102" text-anchor="middle" font-size="13">橙</text><rect x="748" y="40" width="16" height="44" fill="#7b4a12"/><text x="756" y="102" text-anchor="middle" font-size="13">茶</text><text x="660.0" y="30" text-anchor="middle" font-size="13" fill="#5b6470">帯5本(誤差1%)</text><line x1="120" y1="172" x2="440" y2="172" stroke="#8c959f" stroke-width="4"/><rect x="150" y="150" width="260" height="44" rx="16" fill="#e8d5a8" stroke="#8c7a4a" stroke-width="1.5"/><rect x="180" y="150" width="16" height="44" fill="#d1242f"/><text x="188" y="212" text-anchor="middle" font-size="13">赤</text><rect x="222" y="150" width="16" height="44" fill="#d1242f"/><text x="230" y="212" text-anchor="middle" font-size="13">赤</text><rect x="264" y="150" width="16" height="44" fill="#f28c00"/><text x="272" y="212" text-anchor="middle" font-size="13">橙</text><rect x="368" y="150" width="16" height="44" fill="#c9a227"/><text x="376" y="212" text-anchor="middle" font-size="13">金</text><text x="280.0" y="140" text-anchor="middle" font-size="13" fill="#5b6470">帯4本(誤差5%)</text><line x1="500" y1="172" x2="820" y2="172" stroke="#8c959f" stroke-width="4"/><rect x="530" y="150" width="260" height="44" rx="16" fill="#e8d5a8" stroke="#8c7a4a" stroke-width="1.5"/><rect x="560" y="150" width="16" height="44" fill="#d1242f"/><text x="568" y="212" text-anchor="middle" font-size="13">赤</text><rect x="594" y="150" width="16" height="44" fill="#d1242f"/><text x="602" y="212" text-anchor="middle" font-size="13">赤</text><rect x="628" y="150" width="16" height="44" fill="#111"/><text x="636" y="212" text-anchor="middle" font-size="13">黒</text><rect x="662" y="150" width="16" height="44" fill="#d1242f"/><text x="670" y="212" text-anchor="middle" font-size="13">赤</text><rect x="748" y="150" width="16" height="44" fill="#7b4a12"/><text x="756" y="212" text-anchor="middle" font-size="13">茶</text><text x="660.0" y="140" text-anchor="middle" font-size="13" fill="#5b6470">帯5本(誤差1%)</text></svg></div>
+</main>
+</body>
+</html>
