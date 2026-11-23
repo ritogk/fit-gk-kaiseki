@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>フィットGK バルブとカプラー</title>
+<style>
+:root{--ink:#1d1d1b;--sub:#66665f;--line:#ddddd6;--bg:#fff;--soft:#f6f6f2;--warn:#b5520f}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 -apple-system,"Hiragino Sans",sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:32px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--ink)}
+h3{font-size:14px;margin:20px 0 6px}
+p{margin:6px 0}.sub{color:var(--sub);font-size:12px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;margin:6px 0}
+th,td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{background:var(--soft);font-weight:600;white-space:nowrap}
+td.n{white-space:nowrap}
+.note{background:#fff7ec;border-left:4px solid var(--warn);padding:8px 12px;margin:10px 0;font-size:13px}
+a{color:#2357b5;word-break:break-all}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;background:var(--soft);border:1px solid var(--line);margin-right:4px}
+</style>
+</head>
+<body>
+<main>
+<h1>フィットGK(フォグ付き)のバルブ形式とカプラー</h1>
+<p class="sub">2026-11-23 調査。リレーを使わず、カプラーの差し替えで自作ドライバ(HW-039)につなぐための資料。</p>
+
+<h2>1. バルブ形式</h2>
+<p>フォグがハロゲン(H8)なのは前期だけで、後期(2017年6月〜)のフォグは純正LEDのためバルブ交換・カプラー接続の対象外です。そのため、下の表は前期(2013年9月〜2017年5月、GK3/4/5/6・GP5)の値です。</p>
+<div class="wrap"><table>
+<tr><th>灯火</th><th>形式</th><th>定格</th><th>出典</th></tr>
+<tr><td class="n">ロービーム</td><td>H4(ハロゲン車) / 純正LED(LEDヘッドライト車)</td><td class="n">12V60/55W</td><td>N P R F</td></tr>
+<tr><td class="n">ハイビーム</td><td>HB3(9005) ※LEDヘッドライト車のみ。ハロゲン車はH4の1個の球でロー・ハイ兼用</td><td class="n">12V65W(60W)</td><td>N P F</td></tr>
+<tr><td class="n">フォグ</td><td>H8</td><td class="n">12V35W</td><td>N P R F</td></tr>
+<tr><td class="n">車幅灯</td><td>T10(W5W) または LED</td><td class="n">12V5W</td><td>N P R</td></tr>
+<tr><td class="n">フロントウインカー</td><td>T20シングル ピンチ部違い(アンバー)</td><td class="n">12V21W</td><td>N P R F</td></tr>
+<tr><td class="n">サイドウインカー</td><td>T10 または ミラーASSY</td><td class="n">12V5W</td><td>N P R F</td></tr>
+<tr><td class="n">リアウインカー</td><td>T20シングル ピンチ部違い(アンバー)</td><td class="n">12V21W</td><td>N P R F</td></tr>
+<tr><td class="n">テール/ストップ・ハイマウント・ナンバー</td><td>純正LED</td><td class="n">—</td><td>N P R</td></tr>
+<tr><td class="n">バックランプ</td><td>T16(口金はT10と共通 W2.1×9.5d)</td><td class="n">12V16W</td><td>N P R F</td></tr>
+<tr><td class="n">ルームランプ</td><td>T10(前・中 8W / 後 5W)</td><td class="n">12V8W/5W</td><td>N R</td></tr>
+</table></div>
+<p class="sub">出典 N: <a href="https://www.nissei-polarg.co.jp/table/result.php?dc=12000229&mode=pr">日星工業 車種別電球適合表(前期)</a> / P: <a href="https://parts-erabi.com/honda/fit/fit-bulb-size/">パーツ選び.com</a> / R: <a href="https://www.rakuten.ne.jp/gold/stakeholder/honda/fit.html">Stakeholder 小糸適合表(前期・後期)</a> / F: <a href="https://www.fcl-hid.com/blog/adaptiontable/detail.php?detailModelname=%E3%83%95%E3%82%A3%E3%83%83%E3%83%88&modelMany=none&req_number=2184&channel=official">fcl 適合表</a></p>
+<h3>再確認(別の3社の適合表)</h3>
+<p>最初の4資料とは別に、日本ライティングとZweb(どちらもハロゲン車・LED車でページが分かれている)、LIGHT COLLECTION を読み直し、上の表と食い違う値はありませんでした。ハロゲン車はロービーム・ハイビームともH4で、HB3はLED車のページにだけ出てきます。前期フォグは、ハロゲン車・LED車とも全資料でH8でした(H11/H16 の記載はありません)。</p>
+<div class="wrap"><table>
+<tr><th>資料</th><th>対象</th><th>ロー</th><th>ハイ</th><th>フォグ</th><th>バック</th></tr>
+<tr><td><a href="https://nihonlighting.com/fit/honda/001378.html">日本ライティング A</a></td><td>前期 GK3〜6 ハロゲン車</td><td>H4</td><td>H4</td><td>H8</td><td>T16</td></tr>
+<tr><td><a href="https://nihonlighting.com/fit/honda/001379.html">日本ライティング B</a></td><td>前期 GP5/6 LED車</td><td>LED</td><td>HB3</td><td>H8</td><td>T16</td></tr>
+<tr><td><a href="https://www.zwebonlinestore.com/blog/fit/step04.php?channel=official&number=854">Zweb D</a></td><td>前期 GK3〜6 ハロゲン車</td><td>H4</td><td>—</td><td>H8</td><td>T16</td></tr>
+<tr><td><a href="https://www.zwebonlinestore.com/blog/fit/step04.php?channel=official&number=855">Zweb E</a></td><td>前期 GP5/6 LED車</td><td>LED</td><td>HB3</td><td>H8</td><td>T16</td></tr>
+<tr><td><a href="https://shingen.jp/fit/maker4/373/1235/">LIGHT COLLECTION F</a></td><td>前期 GK3〜6/GP5 LED車</td><td>LED</td><td>HB3</td><td>H8</td><td>T16</td></tr>
+<tr><td><a href="https://nihonlighting.com/fit/honda/cat14/001858.html">日本ライティング C</a></td><td>後期 ハロゲン車(参考)</td><td>H4</td><td>H4</td><td>LED</td><td>T20</td></tr>
+</table></div>
+<p class="sub">ホンダ公式のWeb取扱説明書は2020年以降の現行型だけが公開されていて、GK系の電球規格はメーカー資料では確認できていません。H8とH11は球の台座の形が違い、球同士の互換はありません。ただし、カプラー(電気の差し込み口)は共通として売られています。</p>
+
+<div class="note">ハイビームが独立したHB3なのは、ロービームが純正LEDの車だけです。ハロゲン車はH4の1個の球でロー・ハイを切り替えるため、ハイビームだけを別カプラーでつなぐことはできません。いずれの資料にも、GKの純正HID設定は見当たりませんでした。2026-11-23に実車の写真で確認したところ、この車は外側がプロジェクター型のロービーム、内側が反射板式のハイビームで、灯体の下に銀色の駆動ユニットが付いています。そのため、純正LEDヘッドライト車と判断しました(ハイビームはHB3に社外LEDバルブが入っています)。</div>
+
+<h2>2. オス・メスのカプラー商品</h2>
+<p>メスはランプに挿さる側で、自作ドライバの出力をランプへ届けます。オスは車体ハーネスのカプラーに挿さる側で、純正の信号を取り出すときや、抜いた純正カプラーを受けておくときに使います。オス・メス一体の延長ハーネスなら1本で両方を兼ねます。価格は2026-11-23時点です。</p>
+<div class="note">電線の太さを明記していた商品は2件だけです。HB3・H8・H4 は1灯あたり3〜5A流れるため、届いたら実物の線径を確かめ、20AWG(0.5sq)より細ければ2.0sqの線へ付け替えてください。「極性反転」と書かれた商品は、プラスとマイナスが入れ替わる配線のことがあるため、テスターで確認してから使います。</div>
+
+<h3>HB3(9005) ハイビーム</h3>
+<div class="wrap"><table>
+<tr><th>商品</th><th>構成</th><th>電線</th><th>価格</th><th>リンク</th></tr>
+<tr><td>Aoling 9005/9006 オスメス 極性反転 延長 2本入</td><td><span class="tag">オス+メス一体</span></td><td>不明</td><td class="n">2本 ¥1,799</td><td><a href="https://www.amazon.co.jp/dp/B09FTDG5GQ">Amazon</a></td></tr>
+<tr><td>Aoling 9005 HB3 ソケット(オス2・メス2)</td><td><span class="tag">オス</span><span class="tag">メス</span>別々</td><td>不明</td><td class="n">¥1,799</td><td><a href="https://www.amazon.co.jp/dp/B09371VPVR">Amazon</a></td></tr>
+<tr><td>X-STYLE 9005/9006 オス/メス ハーネス 2個セット</td><td><span class="tag">オス</span><span class="tag">メス</span>別々</td><td>不明</td><td class="n">¥1,899</td><td><a href="https://www.amazon.co.jp/dp/B09BDBV292">Amazon</a></td></tr>
+</table></div>
+
+<h3>H8 フォグ(H8/H11/H16 はカプラー共通)</h3>
+<div class="wrap"><table>
+<tr><th>商品</th><th>構成</th><th>電線</th><th>価格</th><th>リンク</th></tr>
+<tr><td>Aoling H11/H8 オスメス 極性反転 延長 2本入</td><td><span class="tag">オス+メス一体</span></td><td>不明</td><td class="n">2本 ¥901</td><td><a href="https://www.amazon.co.jp/dp/B08XYWVM3D">Amazon</a></td></tr>
+<tr><td>UTSAUTO H8/H11 メス&オス 2セット</td><td><span class="tag">オス</span><span class="tag">メス</span>別々</td><td>不明(短め)</td><td class="n">¥2,740</td><td><a href="https://www.amazon.co.jp/dp/B07N39418X">Amazon</a></td></tr>
+<tr><td>FLYPIG H11/H8 メスアダプター 4個</td><td><span class="tag">メス</span></td><td>16AWG・17cm</td><td class="n">4本 ¥1,632</td><td><a href="https://www.amazon.co.jp/dp/B0BNKT73SB">Amazon</a></td></tr>
+</table></div>
+
+<h3>H4 ロービーム(ハロゲン車、3ピン)</h3>
+<div class="wrap"><table>
+<tr><th>商品</th><th>構成</th><th>電線</th><th>価格</th><th>リンク</th></tr>
+<tr><td>ハリケーン H4カプラ延長ハーネス 300mm HD1307</td><td><span class="tag">オス+メス一体</span></td><td>不明</td><td class="n">¥1,095</td><td><a href="https://www.amazon.co.jp/dp/B002BNNWL8">Amazon</a></td></tr>
+<tr><td>Leeadwaey H4 延長3ワイヤー メスソケット 4個</td><td><span class="tag">メス</span></td><td>不明</td><td class="n">4本 ¥908</td><td><a href="https://www.amazon.co.jp/dp/B0CLB37L8T">Amazon</a></td></tr>
+</table></div>
+<p class="sub">HD1307 はバイク向けの汎用品で、四輪のH4カプラーに向きが合うかはページに書かれていません。</p>
+
+<h3>T20 シングル(ウインカー、ピンチ部違い)</h3>
+<div class="wrap"><table>
+<tr><th>商品</th><th>構成</th><th>電線</th><th>価格</th><th>リンク</th></tr>
+<tr><td>YUNPICAR 7440 T20 シングル 防水ソケット</td><td><span class="tag">メス</span></td><td>不明</td><td class="n">¥969</td><td><a href="https://www.amazon.co.jp/dp/B07P4CW3K1">Amazon</a></td></tr>
+<tr><td>YUNPICAR 7440 T20 シングル オスソケット</td><td><span class="tag">オス</span></td><td>不明</td><td class="n">¥929</td><td><a href="https://www.amazon.co.jp/dp/B07P38QGDC">Amazon</a></td></tr>
+<tr><td>変換ハーネス 車両側オス T20/ピンチ部違い兼用 + 電球側メス T10/T16</td><td><span class="tag">オス</span>(T20)</td><td>不明・約10cm</td><td class="n">2本 ¥1,200</td><td><a href="https://www.amazon.co.jp/dp/B0CJPWWT86">Amazon</a></td></tr>
+</table></div>
+<p class="sub">ピンチ部違いの車体ソケットに対応すると明記していたのは、3つ目の変換ハーネスだけです。T20のオス・メス一体の延長品は見つかりませんでした。</p>
+
+<h3>T10 / T16(車幅灯・バックランプ、口金共通)</h3>
+<div class="wrap"><table>
+<tr><th>商品</th><th>構成</th><th>電線</th><th>価格</th><th>リンク</th></tr>
+<tr><td>Aoling T10 オスメス 極性反転 延長 2本入</td><td><span class="tag">オス+メス一体</span></td><td>不明</td><td class="n">2本 ¥1,699</td><td><a href="https://www.amazon.co.jp/dp/B09XGLXFC2">Amazon</a></td></tr>
+<tr><td>uxcell T10 延長ワイヤー 2個</td><td><span class="tag">メス</span></td><td>不明・約30cm</td><td class="n">2本 ¥1,610</td><td><a href="https://www.amazon.co.jp/dp/B07MH6RTZX">Amazon</a></td></tr>
+</table></div>
+
+<h2>3. リアのカプラー(住友電装 090型 HW)</h2>
+<p class="sub">テールのLED用3極は、実物の確認で住友電装 090型 HW 3P と分かりました。品番は住友電装のカタログ(<a href="https://dalroad.com/wp-content/uploads/2015/06/HW-sealed-series.pdf">HW sealed series</a>)で確かめました。端子は幅2.3mm・厚さ0.64mmの平形です。</p>
+<div class="wrap"><table>
+<tr><th>部品</th><th>オス側</th><th>メス側</th></tr>
+<tr><td>3P(一列)ハウジング</td><td class="n">6181-0071</td><td class="n">6189-0130</td></tr>
+<tr><td>3P リテーナー</td><td class="n">6918-0325</td><td class="n">6918-0324</td></tr>
+<tr><td>2P ハウジング</td><td class="n">6181-0070</td><td class="n">6189-0129</td></tr>
+<tr><td>2P リテーナー</td><td class="n">6918-0323</td><td class="n">6918-0322</td></tr>
+<tr><td>端子</td><td class="n">1500-0105</td><td class="n">1500-0106</td></tr>
+<tr><td>防水栓(共用)</td><td colspan="2">7165-0385 灰(外径1.2〜1.7mm) / 7165-0118 青(1.7〜2.4mm) / 7165-0119 茶(2.1〜2.9mm)</td></tr>
+</table></div>
+
+<h3>買える商品</h3>
+<div class="wrap"><table>
+<tr><th>商品</th><th>構成</th><th>価格</th><th>リンク</th></tr>
+<tr><td>090型 HW 防水 3極 カプラー・端子セット タイプ1</td><td><span class="tag">オス</span><span class="tag">メス</span>各1・端子各3・防水栓6</td><td class="n">¥778</td><td><a href="https://item.rakuten.co.jp/uniquesystem/w-sm090hw-3ps-ty1/">楽天</a></td></tr>
+<tr><td>同 メス側のみ タイプ1</td><td><span class="tag">メス</span></td><td class="n">¥386</td><td><a href="https://item.rakuten.co.jp/uniquesystem/w-sm090hw-3pfs-ty1/">楽天</a></td></tr>
+<tr><td>同 オス側のみ タイプ1</td><td><span class="tag">オス</span></td><td class="n">¥412</td><td><a href="https://item.rakuten.co.jp/uniquesystem/w-sm090hw-3pms-ty1/">楽天</a></td></tr>
+<tr><td>090型 HW 防水 2極 カプラー・端子セット</td><td><span class="tag">オス</span><span class="tag">メス</span>各1</td><td class="n">¥738</td><td><a href="https://item.rakuten.co.jp/uniquesystem/w-sm090hw-2ps/">楽天</a></td></tr>
+<tr><td>LEDMATICS GK3〜6 フィット テール電源取り出しハーネス [3049]</td><td><span class="tag">オス+メス一体</span>(電線付き)</td><td class="n">¥2,750</td><td><a href="https://www.ledmatics.jp/product/2011">LEDMATICS</a></td></tr>
+</table></div>
+<div class="note">3Pは「タイプ1」を選んでください。「三角タイプ」(Amazon B071RC1KR1 を含む)は端子が三角配置で、「タイプ2」は丸型の別形状のため、どちらも車両側に合いません。LEDMATICSの品は前期・後期の適合が明記されていないので、買う前に販売元へ確認が要ります。セット品は圧着工具(090型用)で電線をかしめて使います。</div>
+<p class="sub">バックランプとウインカーの2極は、写真ではHW 2Pと言い切れていません。ウインカー(明るいグレー)は形が似ていますが色がカタログと違い、バックランプ(濃いグレー・緑パッキン)は形が一致しません。HW 2Pのメスは外寸22.1×21.4×27.8mmなので、実物を測ると判定できます。</p>
+</main>
+</body>
+</html>
