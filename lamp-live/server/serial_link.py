@@ -25,6 +25,7 @@ class SerialLink:
         self._stop = False
         self._closing = False
         self._sent = {"r": None, "l": None}
+        self._params = {"f": None, "g": None}
         threading.Thread(target=self._reader, daemon=True).start()
 
     @property
@@ -46,6 +47,7 @@ class SerialLink:
             return False
         self.ser, self.port = s, port
         self._sent = {"r": None, "l": None}
+        self._params = {"f": None, "g": None}
         self.write(f"t{config.RUN_FADE_MS}")
         return True
 
@@ -85,6 +87,7 @@ class SerialLink:
         if m and not self._closing and int(m.group(1)) != config.RUN_FADE_MS:
             self.write(f"t{config.RUN_FADE_MS}")
             self._sent = {"r": None, "l": None}
+            self._params = {"f": None, "g": None}
 
     def write(self, cmd):
         with self.lock:
@@ -104,6 +107,13 @@ class SerialLink:
             if self._sent[key] != v:
                 if self.write(f"{key}{v:.1f}"):
                     self._sent[key] = v
+
+    def set_params(self, freq, gamma):
+        """PWM周波数とガンマを、変化があったときだけ送る。"""
+        for key, v, cmd in (("f", freq, f"f{int(freq)}"), ("g", gamma, f"g{gamma:.2f}")):
+            if self._params[key] != v:
+                if self.write(cmd):
+                    self._params[key] = v
 
     def shutdown(self):
         self._closing = True

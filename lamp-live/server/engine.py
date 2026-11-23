@@ -16,6 +16,8 @@ class Engine:
         self.pattern_level = 100.0
         self.speed = 1.0           # 速さ倍率
         self.master = 100.0
+        self.pwm_freq = 1000       # ESP の PWM 周波数(Hz)。ファームの起動時の値と同じ
+        self.gamma = 2.2           # ESP のガンマ。1.0 で画面の%がそのまま出力の割合になる
         self.manual_r = 0.0
         self.manual_l = 0.0
         self.bump = False
@@ -50,6 +52,10 @@ class Engine:
                 self.pattern_level = _clip(v)
             elif k == "speed":
                 self.speed = max(0.1, min(8.0, float(v)))
+            elif k == "pwm_freq":
+                self.pwm_freq = int(max(50, min(19000, float(v))))
+            elif k == "gamma":
+                self.gamma = round(max(0.3, min(3.0, float(v))), 2)
         elif t == "bump":
             self.bump = bool(m.get("on"))
         elif t == "blackout":
@@ -95,6 +101,8 @@ class Engine:
             "pattern_level": self.pattern_level,
             "speed": round(self.speed, 3),
             "master": self.master,
+            "pwm_freq": self.pwm_freq,
+            "gamma": self.gamma,
             "manual_r": self.manual_r,
             "manual_l": self.manual_l,
             "bump": self.bump,

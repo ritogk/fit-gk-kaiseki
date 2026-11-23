@@ -40,6 +40,7 @@ async def engine_loop():
         dt, last = now - last, now
         r, l = engine.tick(dt)
         if link:
+            await asyncio.to_thread(link.set_params, engine.pwm_freq, engine.gamma)
             await asyncio.to_thread(link.set_lr, r, l)
         await asyncio.sleep(max(0.0, period - (time.monotonic() - now)))
 

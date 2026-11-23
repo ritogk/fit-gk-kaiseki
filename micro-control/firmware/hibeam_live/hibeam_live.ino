@@ -7,7 +7,8 @@
 //   l<0-100>  左の明るさ                  例: l30
 //   b<0-100>  左右同時                    例: b50
 //   t<ms>     フェード時間(0->100%)       例: t300
-//   g<値>     ガンマ (LED=2.2 / ハロゲン=0.5)  例: g2.2
+//   g<値>     ガンマ (LED=2.2 / ハロゲン=0.5 / 補正なし=1)  例: g2.2
+//   f<Hz>     PWM周波数 (50-19000)        例: f200
 //   0         全消灯
 // シリアルの1キー操作(Enter不要):
 //   u / j  右 +1 / -1     U / J  右 +5 / -5
@@ -26,7 +27,7 @@ const char* AP_PASS = "naa6ozrpy3";      // 8文字以上
 const int PIN_RPWM = 4;   // 右 (M+)
 const int PIN_LPWM = 6;   // 左 (M-)
 const int PIN_EN   = 5;   // R_EN + L_EN
-const uint32_t PWM_FREQ = 1000;   // LED想定。ハロゲンなら200
+uint32_t pwmFreq = 1000;         // 起動時の値。LED想定。f<Hz> で変更できる(12bitの上限は約19.5kHz)
 const uint8_t  PWM_RES  = 12;     // 0-4095
 const float    MAX_DUTY_PCT = 100.0f;
 float    gammaV = 2.2f;
@@ -105,7 +106,7 @@ uint32_t toDuty(float pct) {
 void setTarget(int i, float v) { ch[i].target = constrain(v, 0.0f, 100.0f); dirty = true; }
 
 void printState() {
-  Serial.printf("R=%.1f%% L=%.1f%% fade=%ums gamma=%.1f\n", ch[0].target, ch[1].target, rampMs, gammaV);
+  Serial.printf("R=%.1f%% L=%.1f%% fade=%ums gamma=%.2f freq=%uHz\n", ch[0].target, ch[1].target, rampMs, gammaV, pwmFreq);
 }
 
 // シリアルとWebで共通のコマンド処理
@@ -120,6 +121,13 @@ void handleCmd(String s) {
   else if (c == 'b') { setTarget(0, v); setTarget(1, v); }
   else if (c == 't') { rampMs = constrain((int)v, 0, 10000); dirty = true; }
   else if (c == 'g') { if (v >= 0.3f && v <= 3.0f) gammaV = v; }
+  else if (c == 'f') {
+    uint32_t f = (uint32_t)v;
+    if (f >= 50 && f <= 19000) {
+      pwmFreq = f;
+      for (auto &k : ch) ledcChangeFrequency(k.pin, pwmFreq, PWM_RES);
+    }
+  }
   else return;
 }
 
@@ -153,8 +161,8 @@ void setup() {
   pinMode(PIN_LPWM, OUTPUT); digitalWrite(PIN_LPWM, LOW);
 
   Serial.begin(115200);
-  ledcAttach(PIN_RPWM, PWM_FREQ, PWM_RES);
-  ledcAttach(PIN_LPWM, PWM_FREQ, PWM_RES);
+  ledcAttach(PIN_RPWM, pwmFreq, PWM_RES);
+  ledcAttach(PIN_LPWM, pwmFreq, PWM_RES);
   ledcWrite(PIN_RPWM, 0);
   ledcWrite(PIN_LPWM, 0);
 

@@ -91,6 +91,13 @@ kbd{font:11px ui-monospace,monospace;background:#f0f0eb;border:1px solid var(--l
         <kbd>1</kbd>〜<kbd>0</kbd> パターン切替(同じキーで停止) ・ <kbd>Space</kbd> フラッシュ ・ <kbd>T</kbd> タップ ・ <kbd>B</kbd> ブラックアウト ・ <kbd>Esc</kbd> 全停止 ・ <kbd>↑</kbd><kbd>↓</kbd> マスター ・ <kbd>←</kbd><kbd>→</kbd> 速さ
       </div>
     </div>
+    <div class="card" style="margin-top:12px">
+      <h2>出力の調整 (ランプとの相性)</h2>
+      <div class="fader"><label>PWM周波数</label><input type="range" id="freq" min="0" max="1" step="0.002" value="0.5"><output id="ofreq">1000Hz</output></div>
+      <div class="fader"><label>ガンマ</label><input type="range" id="gamma" min="0.5" max="3" step="0.1" value="2.2"><output id="ogamma">2.2</output></div>
+      <div class="row"><button class="btn" id="g1" style="height:44px">ガンマ 1.0<small>画面の%=出力の割合</small></button><button class="btn" id="g22" style="height:44px">ガンマ 2.2<small>LED向けの体感補正</small></button></div>
+      <div class="keys" id="duty"></div>
+    </div>
   </section>
 </main>
 <script>
@@ -109,6 +116,9 @@ function connect(){
 // 速さスライダーは log2 目盛り(-2..3 → 0.25×..8×)
 const speedFromSlider = v => Math.pow(2, +v);
 const sliderFromSpeed = s => Math.log2(s);
+const F_MIN = 50, F_MAX = 19000;
+const freqFromSlider = v => Math.round(F_MIN * Math.pow(F_MAX / F_MIN, +v));
+const sliderFromFreq = f => Math.log(f / F_MIN) / Math.log(F_MAX / F_MIN);
 
 function setSlider(id, v, out, fmt){
   if (!dragging.has(id)) $(id).value = v;
@@ -143,6 +153,11 @@ function render(m){
   }
   setSlider('ml', m.manual_l, 'oml');
   setSlider('mr', m.manual_r, 'omr');
+  if (!dragging.has('freq')) $('freq').value = sliderFromFreq(m.pwm_freq);
+  $('ofreq').textContent = m.pwm_freq + 'Hz';
+  setSlider('gamma', m.gamma, 'ogamma', v => (+v).toFixed(1));
+  const d = v => (Math.pow(v / 100, m.gamma) * 100).toFixed(1);
+  $('duty').textContent = `実際の出力(12Vを流す時間の割合): 左 ${d(m.out.l)}% ・ 右 ${d(m.out.r)}%`;
 }
 
 function bindRange(id, onInput){
@@ -156,6 +171,11 @@ bindRange('master', v => send({t:'set', key:'master', value:v}));
 bindRange('plevel', v => send({t:'set', key:'pattern_level', value:v}));
 bindRange('speed',  v => send({t:'set', key:'speed', value:speedFromSlider(v)}));
 bindRange('ml', v => send({t:'manual', l:v}));
+// 周波数スライダーは対数目盛り(0..1 → 50Hz..19000Hz)
+bindRange('freq', v => send({t:'set', key:'pwm_freq', value:freqFromSlider(v)}));
+bindRange('gamma', v => send({t:'set', key:'gamma', value:v}));
+$('g1').onclick = () => send({t:'set', key:'gamma', value:1});
+$('g22').onclick = () => send({t:'set', key:'gamma', value:2.2});
 bindRange('mr', v => send({t:'manual', r:v}));
 
 function togglePattern(k){ send({t:'pattern', name: st.pattern === k ? null : k}); }
