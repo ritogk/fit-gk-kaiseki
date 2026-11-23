@@ -100,6 +100,8 @@ class Engine:
             "bump": self.bump,
             "blackout": self.blackout,
             "out": {"r": round(self.out_r, 1), "l": round(self.out_l, 1)},
+            # XYパッド上を動くパターン(楕円ループ)の現在位置。画面の点を動かすのに使う
+            "xy": getattr(patterns.BY_KEY.get(self.pattern), "xy", None) if self.pattern else None,
         }
 
 

@@ -135,6 +135,12 @@ function render(m){
   setSlider('plevel', m.pattern_level, 'oplevel');
   if (!dragging.has('speed')) $('speed').value = sliderFromSpeed(m.speed);
   $('ospeed').textContent = m.speed.toFixed(2) + '×';
+  if (!xyHeld) {
+    if (m.xy) {
+      const r = xy.getBoundingClientRect();
+      dot.style.display = 'block'; dot.style.left = m.xy[0] * r.width + 'px'; dot.style.top = (1 - m.xy[1]) * r.height + 'px';
+    } else dot.style.display = 'none';
+  }
   setSlider('ml', m.manual_l, 'oml');
   setSlider('mr', m.manual_r, 'omr');
 }
@@ -157,7 +163,7 @@ function togglePattern(k){ send({t:'pattern', name: st.pattern === k ? null : k}
 fetch('/api/patterns').then(r => r.json()).then(list => {
   patterns = list;
   $('pads').innerHTML = list.map((p, i) =>
-    `<button class="pad" data-k="${p.key}"><small>${(i + 1) % 10}</small>${p.label}</button>`).join('');
+    `<button class="pad" data-k="${p.key}"><small>${i < 10 ? (i + 1) % 10 : ""}</small>${p.label}</button>`).join('');
   document.querySelectorAll('.pad').forEach(p => p.onclick = () => togglePattern(p.dataset.k));
 });
 
@@ -172,6 +178,7 @@ $('panic').onclick = () => send({t:'panic'});
 
 // XYパッド: 横=配分, 縦=明るさ。離すと手動は0に戻る
 const xy = $('xy'), dot = xy.querySelector('.dot');
+let xyHeld = false;
 function xyMove(e){
   const r = xy.getBoundingClientRect();
   const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
@@ -180,9 +187,9 @@ function xyMove(e){
   const v = y * 100;
   send({t:'manual', l: v * Math.min(1, 2 * (1 - x)), r: v * Math.min(1, 2 * x)});
 }
-xy.addEventListener('pointerdown', e => { xy.setPointerCapture(e.pointerId); dragging.add('ml'); dragging.add('mr'); xyMove(e); });
+xy.addEventListener('pointerdown', e => { xyHeld = true; xy.setPointerCapture(e.pointerId); dragging.add('ml'); dragging.add('mr'); xyMove(e); });
 xy.addEventListener('pointermove', e => { if (xy.hasPointerCapture(e.pointerId)) xyMove(e); });
-const xyEnd = () => { dot.style.display = 'none'; dragging.delete('ml'); dragging.delete('mr'); send({t:'manual', l:0, r:0}); };
+const xyEnd = () => { xyHeld = false; dot.style.display = 'none'; dragging.delete('ml'); dragging.delete('mr'); send({t:'manual', l:0, r:0}); };
 xy.addEventListener('pointerup', xyEnd); xy.addEventListener('pointercancel', xyEnd);
 
 // キーボード

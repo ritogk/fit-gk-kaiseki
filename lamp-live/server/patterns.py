@@ -181,8 +181,28 @@ class Creature(Pattern):
         return r, l
 
 
+def xy_to_lr(x, y):
+    """XYパッドと同じ変換。x=0左〜1右の配分, y=0暗〜1明。"""
+    v = 100 * y
+    return v * min(1.0, 2 * x), v * min(1.0, 2 * (1 - x))  # (右, 左)
+
+
+class Orbit(Pattern):
+    """XYパッドの端いっぱいの楕円を、点が自動でぐるぐる回る。"""
+    key, label, period = "orbit", "楕円ループ", 2.0
+
+    def reset(self):
+        self.xy = (0.5, 0.5)
+
+    def __call__(self, t, dt):
+        a = 2 * math.pi * t / self.period
+        x, y = 0.5 + 0.5 * math.cos(a), 0.5 + 0.5 * math.sin(a)
+        self.xy = (x, y)
+        return xy_to_lr(x, y)
+
+
 ALL = [Breathe(), Alt(), Wave(), FastWave(), Heartbeat(), PingPong(),
-       Strobe(), Flicker(), Sparkle(), Creature()]
+       Strobe(), Flicker(), Sparkle(), Creature(), Orbit()]
 BY_KEY = {p.key: p for p in ALL}
 for _p in ALL:
     _p.reset()
