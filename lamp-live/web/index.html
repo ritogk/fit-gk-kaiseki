@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>lamp-live</title>
+<style>
+:root{--bg:#f4f4f1;--panel:#fff;--ink:#1d1d1b;--sub:#6b6b66;--line:#dcdcd6;--acc:#e8a317;--acc2:#2f6fde;--red:#d43c2f}
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,"Hiragino Sans",sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:16px;margin:0;font-weight:700}
+#conn{font-size:12px;padding:3px 8px;border-radius:99px;background:#eee;color:var(--sub)}
+#conn.ok{background:#e3f4e5;color:#1f7a32}#conn.ng{background:#fbe4e1;color:var(--red)}
+#ser{font-size:12px;color:var(--sub);font-family:ui-monospace,monospace}
+main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.3fr);gap:12px;padding:12px 16px;max-width:1200px;margin:0 auto}
+@media(max-width:760px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card h2{font-size:12px;color:var(--sub);margin:0 0 8px;font-weight:600;letter-spacing:.05em}
+.lamps{display:flex;justify-content:space-around;align-items:center;padding:8px 0}
+.lamp{text-align:center}
+.bulb{width:110px;height:110px;border-radius:50%;background:#e9e9e4;border:2px solid var(--line);margin:0 auto 6px;transition:none}
+.lamp b{font-size:20px;font-variant-numeric:tabular-nums}
+.pads{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.pad{height:64px;border-radius:10px;border:1px solid var(--line);background:#fafaf7;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;position:relative}
+.pad small{position:absolute;top:4px;left:6px;font-size:10px;color:var(--sub);font-weight:400}
+.pad.on{background:var(--acc);border-color:var(--acc);color:#fff}.pad.on small{color:#fff}
+.row{display:flex;gap:8px;margin-top:8px}
+.btn{flex:1;height:72px;border-radius:12px;border:1px solid var(--line);background:#fafaf7;font-size:15px;font-weight:700;cursor:pointer;color:var(--ink)}
+.btn small{display:block;font-size:10px;font-weight:400;color:var(--sub)}
+#bump.on{background:var(--acc2);color:#fff;border-color:var(--acc2)}
+#blackout.on{background:var(--ink);color:#fff}
+#panic{background:var(--red);color:#fff;border-color:var(--red)}#panic small{color:#fde}
+.fader{display:grid;grid-template-columns:7em 1fr 4em;align-items:center;gap:8px;margin:10px 0}
+.fader label{font-size:13px}.fader output{text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+input[type=range]{width:100%;height:36px;accent-color:var(--acc)}
+#xy{position:relative;height:240px;border-radius:12px;background:linear-gradient(to top,#efefea,#fff6df);border:1px solid var(--line);touch-action:none}
+#xy .dot{position:absolute;width:28px;height:28px;margin:-14px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 6px rgba(232,163,23,.25);pointer-events:none;display:none}
+#xy .lbl{position:absolute;font-size:11px;color:var(--sub)}
+.keys{font-size:11px;color:var(--sub);margin-top:8px;line-height:1.7}
+kbd{font:11px ui-monospace,monospace;background:#f0f0eb;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>lamp-live ハイビーム</h1>
+  <span id="conn">接続中…</span>
+  <span id="ser"></span>
+</header>
+<main>
+  <section>
+    <div class="card">
+      <h2>出力</h2>
+      <div class="lamps">
+        <div class="lamp"><div class="bulb" id="bl"></div>左 <b id="vl">0</b>%</div>
+        <div class="lamp"><div class="bulb" id="br"></div>右 <b id="vr">0</b>%</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>ライブ</h2>
+      <div class="row" style="margin-top:0">
+        <button class="btn" id="bump">フラッシュ<small>押している間100% / Space</small></button>
+        <button class="btn" id="tap">タップ<small>拍に合わせて連打 / T</small></button>
+      </div>
+      <div class="row">
+        <button class="btn" id="blackout">ブラックアウト<small>切替 / B</small></button>
+        <button class="btn" id="panic">全停止<small>パターン停止+消灯 / Esc</small></button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>手動 (XYパッド: 横=左右の配分, 縦=明るさ)</h2>
+      <div id="xy"><div class="dot"></div>
+        <span class="lbl" style="left:8px;bottom:6px">左</span>
+        <span class="lbl" style="right:8px;bottom:6px">右</span>
+        <span class="lbl" style="left:50%;top:6px;transform:translateX(-50%)">明</span></div>
+      <div class="fader"><label>左</label><input type="range" id="ml" min="0" max="100" step="0.5" value="0"><output id="oml">0</output></div>
+      <div class="fader"><label>右</label><input type="range" id="mr" min="0" max="100" step="0.5" value="0"><output id="omr">0</output></div>
+    </div>
+  </section>
+  <section>
+    <div class="card">
+      <h2>パターン</h2>
+      <div class="pads" id="pads"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>ミックス</h2>
+      <div class="fader"><label>マスター</label><input type="range" id="master" min="0" max="100" step="0.5" value="100"><output id="omaster">100</output></div>
+      <div class="fader"><label>パターン量</label><input type="range" id="plevel" min="0" max="100" step="0.5" value="100"><output id="oplevel">100</output></div>
+      <div class="fader"><label>速さ</label><input type="range" id="speed" min="-2" max="3" step="0.01" value="0"><output id="ospeed">1.00×</output></div>
+      <div class="keys">
+        <kbd>1</kbd>〜<kbd>0</kbd> パターン切替(同じキーで停止) ・ <kbd>Space</kbd> フラッシュ ・ <kbd>T</kbd> タップ ・ <kbd>B</kbd> ブラックアウト ・ <kbd>Esc</kbd> 全停止 ・ <kbd>↑</kbd><kbd>↓</kbd> マスター ・ <kbd>←</kbd><kbd>→</kbd> 速さ
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let ws, st = {}, patterns = [], dragging = new Set();
+
+function send(m){ if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
+
+function connect(){
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => { $('conn').textContent = 'サーバ接続'; $('conn').className = 'ok'; };
+  ws.onclose = () => { $('conn').textContent = 'サーバ切断'; $('conn').className = 'ng'; setTimeout(connect, 1000); };
+  ws.onmessage = e => { const m = JSON.parse(e.data); if (m.t === 'state') render(m); };
+}
+
+// 速さスライダーは log2 目盛り(-2..3 → 0.25×..8×)
+const speedFromSlider = v => Math.pow(2, +v);
+const sliderFromSpeed = s => Math.log2(s);
+
+function setSlider(id, v, out, fmt){
+  if (!dragging.has(id)) $(id).value = v;
+  $(out).textContent = fmt ? fmt(v) : Math.round(v);
+}
+
+function glow(el, v){
+  const a = v / 100;
+  el.style.background = `rgba(255, ${200 + 55 * a | 0}, ${150 + 90 * a | 0}, ${0.15 + 0.85 * a})`;
+  el.style.boxShadow = `0 0 ${10 + 60 * a}px ${a * 20}px rgba(255, 220, 140, ${a})`;
+}
+
+function render(m){
+  st = m;
+  const s = m.serial;
+  $('ser').textContent = s.connected ? `ESP32 ${s.port}` : 'ESP32 未接続(USBを確認)';
+  $('ser').style.color = s.connected ? '' : 'var(--red)';
+  glow($('bl'), m.out.l); glow($('br'), m.out.r);
+  $('vl').textContent = m.out.l.toFixed(0); $('vr').textContent = m.out.r.toFixed(0);
+  document.querySelectorAll('.pad').forEach(p => p.classList.toggle('on', p.dataset.k === m.pattern));
+  $('bump').classList.toggle('on', m.bump);
+  $('blackout').classList.toggle('on', m.blackout);
+  setSlider('master', m.master, 'omaster');
+  setSlider('plevel', m.pattern_level, 'oplevel');
+  if (!dragging.has('speed')) $('speed').value = sliderFromSpeed(m.speed);
+  $('ospeed').textContent = m.speed.toFixed(2) + '×';
+  setSlider('ml', m.manual_l, 'oml');
+  setSlider('mr', m.manual_r, 'omr');
+}
+
+function bindRange(id, onInput){
+  const el = $(id);
+  el.addEventListener('pointerdown', () => dragging.add(id));
+  const up = () => dragging.delete(id);
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('change', up);
+  el.addEventListener('input', () => onInput(+el.value));
+}
+bindRange('master', v => send({t:'set', key:'master', value:v}));
+bindRange('plevel', v => send({t:'set', key:'pattern_level', value:v}));
+bindRange('speed',  v => send({t:'set', key:'speed', value:speedFromSlider(v)}));
+bindRange('ml', v => send({t:'manual', l:v}));
+bindRange('mr', v => send({t:'manual', r:v}));
+
+function togglePattern(k){ send({t:'pattern', name: st.pattern === k ? null : k}); }
+
+fetch('/api/patterns').then(r => r.json()).then(list => {
+  patterns = list;
+  $('pads').innerHTML = list.map((p, i) =>
+    `<button class="pad" data-k="${p.key}"><small>${(i + 1) % 10}</small>${p.label}</button>`).join('');
+  document.querySelectorAll('.pad').forEach(p => p.onclick = () => togglePattern(p.dataset.k));
+});
+
+// フラッシュ(押している間だけ)
+const bumpOn = e => { e && e.preventDefault(); send({t:'bump', on:true}); };
+const bumpOff = () => send({t:'bump', on:false});
+$('bump').addEventListener('pointerdown', bumpOn);
+['pointerup','pointerleave','pointercancel'].forEach(ev => $('bump').addEventListener(ev, bumpOff));
+$('tap').addEventListener('pointerdown', () => send({t:'tap'}));
+$('blackout').onclick = () => send({t:'blackout', on: !st.blackout});
+$('panic').onclick = () => send({t:'panic'});
+
+// XYパッド: 横=配分, 縦=明るさ。離すと手動は0に戻る
+const xy = $('xy'), dot = xy.querySelector('.dot');
+function xyMove(e){
+  const r = xy.getBoundingClientRect();
+  const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  const y = Math.min(1, Math.max(0, 1 - (e.clientY - r.top) / r.height));
+  dot.style.display = 'block'; dot.style.left = x * r.width + 'px'; dot.style.top = (1 - y) * r.height + 'px';
+  const v = y * 100;
+  send({t:'manual', l: v * Math.min(1, 2 * (1 - x)), r: v * Math.min(1, 2 * x)});
+}
+xy.addEventListener('pointerdown', e => { xy.setPointerCapture(e.pointerId); dragging.add('ml'); dragging.add('mr'); xyMove(e); });
+xy.addEventListener('pointermove', e => { if (xy.hasPointerCapture(e.pointerId)) xyMove(e); });
+const xyEnd = () => { dot.style.display = 'none'; dragging.delete('ml'); dragging.delete('mr'); send({t:'manual', l:0, r:0}); };
+xy.addEventListener('pointerup', xyEnd); xy.addEventListener('pointercancel', xyEnd);
+
+// キーボード
+let spaceDown = false;
+addEventListener('keydown', e => {
+  if (e.repeat && e.code !== 'ArrowUp' && e.code !== 'ArrowDown' && e.code !== 'ArrowLeft' && e.code !== 'ArrowRight') return;
+  if (/^Digit\d$/.test(e.code)){ const i = (+e.code.slice(5) + 9) % 10; if (patterns[i]) togglePattern(patterns[i].key); }
+  else if (e.code === 'Space'){ e.preventDefault(); if (!spaceDown){ spaceDown = true; bumpOn(); } }
+  else if (e.code === 'KeyT') send({t:'tap'});
+  else if (e.code === 'KeyB') send({t:'blackout', on: !st.blackout});
+  else if (e.code === 'Escape') send({t:'panic'});
+  else if (e.code === 'ArrowUp' || e.code === 'ArrowDown'){ e.preventDefault(); send({t:'set', key:'master', value: Math.max(0, Math.min(100, st.master + (e.code === 'ArrowUp' ? 5 : -5)))}); }
+  else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight'){ e.preventDefault(); send({t:'set', key:'speed', value: st.speed * (e.code === 'ArrowRight' ? 1.1 : 1/1.1)}); }
+});
+addEventListener('keyup', e => { if (e.code === 'Space'){ spaceDown = false; bumpOff(); } });
+addEventListener('blur', () => { if (spaceDown){ spaceDown = false; bumpOff(); } });
+
+connect();
+</script>
+</body>
+</html>
