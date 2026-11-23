@@ -37,6 +37,14 @@ input[type=range]{width:100%;height:36px;accent-color:var(--acc)}
 #xy{position:relative;height:240px;border-radius:12px;background:linear-gradient(to top,#efefea,#fff6df);border:1px solid var(--line);touch-action:none}
 #xy .dot{position:absolute;width:28px;height:28px;margin:-14px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 6px rgba(232,163,23,.25);pointer-events:none;display:none}
 #xy .lbl{position:absolute;font-size:11px;color:var(--sub)}
+#xyfs{position:absolute;top:6px;right:6px;z-index:2;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.85);font-size:12px;font-weight:600;color:var(--ink);cursor:pointer}
+#xy.fs{position:fixed;inset:0;z-index:100;height:auto;border-radius:0;border:none}
+#xy:fullscreen{height:100%;border-radius:0;border:none}
+#xy.fs .dot,#xy:fullscreen .dot{width:56px;height:56px;margin:-28px}
+#xy.fs .lbl,#xy:fullscreen .lbl{font-size:16px}
+.scope{display:flex;gap:8px;margin-top:8px}
+.scope canvas{height:170px;border:1px solid var(--line);border-radius:8px;background:#fcfcfa}
+#wave{flex:1;min-width:0}#curve{width:170px;flex:none}
 .keys{font-size:11px;color:var(--sub);margin-top:8px;line-height:1.7}
 kbd{font:11px ui-monospace,monospace;background:#f0f0eb;border:1px solid var(--line);border-radius:4px;padding:0 4px}
 </style>
@@ -69,7 +77,7 @@ kbd{font:11px ui-monospace,monospace;background:#f0f0eb;border:1px solid var(--l
     </div>
     <div class="card" style="margin-top:12px">
       <h2>手動 (XYパッド: 横=左右の配分, 縦=明るさ)</h2>
-      <div id="xy"><div class="dot"></div>
+      <div id="xy"><div class="dot"></div><button id="xyfs">全画面</button>
         <span class="lbl" style="left:8px;bottom:6px">左</span>
         <span class="lbl" style="right:8px;bottom:6px">右</span>
         <span class="lbl" style="left:50%;top:6px;transform:translateX(-50%)">明</span></div>
@@ -96,7 +104,9 @@ kbd{font:11px ui-monospace,monospace;background:#f0f0eb;border:1px solid var(--l
       <div class="fader"><label>PWM周波数</label><input type="range" id="freq" min="0" max="1" step="0.002" value="0.5"><output id="ofreq">1000Hz</output></div>
       <div class="fader"><label>ガンマ</label><input type="range" id="gamma" min="0.5" max="3" step="0.1" value="2.2"><output id="ogamma">2.2</output></div>
       <div class="row"><button class="btn" id="g1" style="height:44px">ガンマ 1.0<small>画面の%=出力の割合</small></button><button class="btn" id="g22" style="height:44px">ガンマ 2.2<small>LED向けの体感補正</small></button></div>
+      <div class="scope"><canvas id="wave"></canvas><canvas id="curve"></canvas></div>
       <div class="keys" id="duty"></div>
+      <div class="keys">波形は設定値から計算した図で、実測ではありません。左の図は出力端子の電圧(12Vと0V)、右の図はガンマのカーブ(横=画面の%、縦=出力の割合)です。</div>
     </div>
   </section>
 </main>
@@ -158,6 +168,55 @@ function render(m){
   setSlider('gamma', m.gamma, 'ogamma', v => (+v).toFixed(1));
   const d = v => (Math.pow(v / 100, m.gamma) * 100).toFixed(1);
   $('duty').textContent = `実際の出力(12Vを流す時間の割合): 左 ${d(m.out.l)}% ・ 右 ${d(m.out.r)}%`;
+  drawScope(m);
+}
+
+// ---- 波形とガンマカーブ(設定値からの計算) ----
+function fit(cv){
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)){ cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+  return [c, w, h];
+}
+function drawScope(m){
+  const g = m.gamma, f = m.pwm_freq, duty = v => Math.pow(v / 100, g);
+  // 表示する時間幅は周波数に合わせて切り替える(2〜20周期が入る)
+  const win = f < 200 ? 0.1 : f < 2000 ? 0.01 : 0.001;
+  let [c, w, h] = fit($('wave'));
+  c.font = '11px -apple-system,sans-serif'; c.textBaseline = 'top';
+  const rows = [['左', m.out.l, '#e8a317'], ['右', m.out.r, '#2f6fde']];
+  const rh = (h - 22) / 2, px = 8, pw = w - 16;
+  rows.forEach(([name, v, col], i) => {
+    const d = duty(v), top = 4 + i * rh, hi = top + 18, lo = top + rh - 8;
+    c.fillStyle = '#6b6b66';
+    c.fillText(`${name}  ${(d * 100).toFixed(1)}%  平均 ${(d * 12).toFixed(1)}V`, px, top);
+    c.strokeStyle = '#e4e4de'; c.lineWidth = 1; c.beginPath(); c.moveTo(px, lo + .5); c.lineTo(px + pw, lo + .5); c.stroke();
+    c.strokeStyle = col; c.lineWidth = 2; c.beginPath();
+    const P = pw / (win * f);            // 1周期の幅(px)
+    if (d <= 0){ c.moveTo(px, lo); c.lineTo(px + pw, lo); }
+    else if (d >= 1){ c.moveTo(px, hi); c.lineTo(px + pw, hi); }
+    else for (let x = 0; x < pw; x += P){
+      const e = Math.min(pw, x + P * d), n = Math.min(pw, x + P);
+      c.moveTo(px + x, lo); c.lineTo(px + x, hi); c.lineTo(px + e, hi);
+      if (e < pw){ c.lineTo(px + e, lo); c.lineTo(px + n, lo); }
+    }
+    c.stroke();
+  });
+  c.fillStyle = '#6b6b66'; c.textAlign = 'right';
+  const per = 1000 / f;
+  c.fillText(`横幅 ${win * 1000}ms ・ 1周期 ${per >= 1 ? per.toFixed(1) + 'ms' : (per * 1000).toFixed(0) + 'µs'}`, w - px, h - 15);
+  c.textAlign = 'left';
+
+  [c, w, h] = fit($('curve'));
+  const m0 = 10, cw = w - 2 * m0, chh = h - 2 * m0, X = x => m0 + x * cw, Y = y => m0 + (1 - y) * chh;
+  c.strokeStyle = '#e4e4de'; c.lineWidth = 1; c.strokeRect(m0 + .5, m0 + .5, cw, chh);
+  c.setLineDash([3, 3]); c.beginPath(); c.moveTo(X(0), Y(0)); c.lineTo(X(1), Y(1)); c.stroke(); c.setLineDash([]);
+  c.strokeStyle = '#1d1d1b'; c.lineWidth = 2; c.beginPath();
+  for (let i = 0; i <= 50; i++){ const x = i / 50; i ? c.lineTo(X(x), Y(Math.pow(x, g))) : c.moveTo(X(x), Y(0)); }
+  c.stroke();
+  rows.forEach(([, v, col]) => { c.fillStyle = col; c.beginPath(); c.arc(X(v / 100), Y(duty(v)), 5, 0, 7); c.fill(); });
+  c.fillStyle = '#6b6b66'; c.font = '11px -apple-system,sans-serif'; c.textBaseline = 'top';
+  c.fillText(`ガンマ ${g.toFixed(1)}`, m0 + 6, m0 + 4);
 }
 
 function bindRange(id, onInput){
@@ -211,6 +270,26 @@ xy.addEventListener('pointerdown', e => { xyHeld = true; xy.setPointerCapture(e.
 xy.addEventListener('pointermove', e => { if (xy.hasPointerCapture(e.pointerId)) xyMove(e); });
 const xyEnd = () => { xyHeld = false; dot.style.display = 'none'; dragging.delete('ml'); dragging.delete('mr'); send({t:'manual', l:0, r:0}); };
 xy.addEventListener('pointerup', xyEnd); xy.addEventListener('pointercancel', xyEnd);
+
+// XYパッドの全画面表示。ブラウザの全画面が使えない端末(iPhone等)では画面いっぱいに広げるだけにする
+const fsBtn = $('xyfs');
+const fsOn = () => xy.classList.contains('fs');
+function setFs(on){
+  xy.classList.toggle('fs', on);
+  fsBtn.textContent = on ? '閉じる' : '全画面';
+  const req = xy.requestFullscreen || xy.webkitRequestFullscreen;
+  const exit = document.exitFullscreen || document.webkitExitFullscreen;
+  const cur = document.fullscreenElement || document.webkitFullscreenElement;
+  try {
+    if (on && req && !cur){ const p = req.call(xy); if (p && p.catch) p.catch(() => {}); }
+    else if (!on && exit && cur){ const p = exit.call(document); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+}
+fsBtn.addEventListener('pointerdown', e => e.stopPropagation());
+fsBtn.addEventListener('click', e => { e.stopPropagation(); setFs(!fsOn()); });
+['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => {
+  if (!(document.fullscreenElement || document.webkitFullscreenElement) && fsOn()) setFs(false);
+}));
 
 // キーボード
 let spaceDown = false;
