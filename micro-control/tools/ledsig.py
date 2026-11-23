@@ -11,7 +11,7 @@
 解析だけ(保存済みファイルを指定):
   python3 micro-control/tools/ledsig.py analyze micro-control/logs/ledsig/*.txt
 
-簡易オシロ(ファーム led_sig_scope。電圧も分かる。2系統 A=GPIO1 / B=GPIO10):
+簡易オシロ(ファーム led_sig_scope。電圧も分かる。2系統 A=GPIO1 / B=GPIO2):
   .venv/bin/python micro-control/tools/ledsig.py scope lo_on 200
 
 判定の種類:

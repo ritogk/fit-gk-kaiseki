@@ -4,7 +4,7 @@
 // 解析は tools/ledsig.py scope <label> [ms]。
 //
 // ── 配線(1系統あたり抵抗2本。A・Bとも同じ) ──────────
-//   測りたい線 ──[100kΩ]──┬── GPIO1  (CH A) / GPIO10 (CH B)
+//   測りたい線 ──[100kΩ]──┬── GPIO1  (CH A) / GPIO2 (CH B)
 //                          └─[22kΩ]── GND
 //   車のGND ─────────────────── ESP32 GND
 //   12V→2.16V、14.5V→2.61V、5V→0.90V になる(倍率 5.545)。
@@ -24,7 +24,7 @@
 #include "esp_adc/adc_cali_scheme.h"
 
 static const adc_channel_t CH_A = ADC_CHANNEL_0;  // GPIO1
-static const adc_channel_t CH_B = ADC_CHANNEL_9;  // GPIO10
+static const adc_channel_t CH_B = ADC_CHANNEL_1;  // GPIO2
 static const uint32_t FS_TOTAL = 80000;           // 2系統合計。S3の上限は約83kHz
 static const uint32_t MAX_N = 40000;              // 1系統あたり最大点数(1000ms)
 
@@ -100,7 +100,7 @@ void setup() {
   bufB = (uint16_t *)malloc(MAX_N * 2);
   adcInit();
   delay(300);
-  Serial.println("#READY led_sig_scope  s <label> [ms]  A=GPIO1 B=GPIO10");
+  Serial.println("#READY led_sig_scope  s <label> [ms]  A=GPIO1 B=GPIO2");
 }
 
 void loop() {
