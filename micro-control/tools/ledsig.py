@@ -11,6 +11,9 @@
 解析だけ(保存済みファイルを指定):
   python3 micro-control/tools/ledsig.py analyze micro-control/logs/ledsig/*.txt
 
+簡易オシロ(ファーム led_sig_scope。電圧も分かる。2系統 A=GPIO1 / B=GPIO10):
+  .venv/bin/python micro-control/tools/ledsig.py scope lo_on 200
+
 判定の種類:
   CONST   エッジなし。ずっと High か Low(ON/OFF を電圧レベルで伝えている)
   PWM     周期がそろっている。周波数とデューティを出す
@@ -170,8 +173,106 @@ def analyze(paths):
                 print(f"  {ch}: " + analyze_ch(c["ch"][ch], m.get(f"{ch}0", "0")))
 
 
+# ── 簡易オシロ(led_sig_scope) ─────────────────────────
+DIV = float(os.environ.get("LEDSIG_DIV", "5.545"))  # (上+下)÷下。100k/22k の既定値
+
+
+def scope_rec(label, ms):
+    import serial
+
+    with serial.Serial(PORT, 921600, timeout=0.5) as s:
+        time.sleep(2.0)
+        s.reset_input_buffer()
+        s.write(f"s {label} {ms}\n".encode())
+        lines, started, deadline = [], False, time.time() + 30
+        while time.time() < deadline:
+            ln = s.readline().decode(errors="replace").strip()
+            if ln.startswith("#SCOPE"):
+                started = True
+            if started and ln:
+                lines.append(ln)
+            if ln == "#END":
+                break
+        else:
+            sys.exit("タイムアウト: #END が来ませんでした(ポートやファームを確認)")
+    os.makedirs(LOGDIR, exist_ok=True)
+    path = os.path.join(LOGDIR, f"{dt.datetime.now():%Y%m%d-%H%M%S}_{label}.scope.txt")
+    with open(path, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"保存: {os.path.normpath(path)}")
+    return path
+
+
+def scope_load(path):
+    meta, ch = {}, {"A": [], "B": []}
+    for ln in open(path):
+        ln = ln.strip()
+        if ln.startswith("#SCOPE"):
+            meta = dict(re.findall(r"(\w+)=(\S+)", ln))
+        elif ln[:2] in ("A ", "B "):
+            h = ln[2:]
+            ch[ln[0]] += [int(h[i:i + 3], 16) / 1000 * DIV for i in range(0, len(h) - 2, 3)]
+    return meta, ch
+
+
+def ascii_wave(v, lo, hi, width=100, rows=6):
+    """先頭から width 列ぶんの波形を文字で描く(1列=複数点の最小〜最大)。"""
+    step = max(1, len(v) // width)
+    cols = [(min(v[i:i + step]), max(v[i:i + step])) for i in range(0, step * width, step) if v[i:i + step]]
+    span = max(hi - lo, 0.1)
+    out = []
+    for r in range(rows - 1, -1, -1):
+        y0, y1 = lo + span * r / rows, lo + span * (r + 1) / rows
+        out.append("".join("█" if a < y1 and b >= y0 else " " for a, b in cols))
+    return out, step
+
+
+def scope_analyze(paths):
+    for p in paths:
+        meta, ch = scope_load(p)
+        n, us = int(meta.get("n", 0)), int(meta.get("us", 1))
+        if not n:
+            print(f"\n■ {os.path.basename(p)}: データなし")
+            continue
+        dt_us = us / n
+        print(f"\n■ {meta.get('label')}  ({os.path.basename(p)})  {us/1000:.0f}ms  1点={dt_us:.1f}µs  倍率×{DIV}")
+        for name in ("A", "B"):
+            v = ch[name]
+            sv = sorted(v)
+            lo, hi = sv[len(sv) // 100], sv[-1 - len(sv) // 100]
+            avg = sum(v) / len(v)
+            head = f"  {name}: 最小{lo:.2f}V  最大{hi:.2f}V  平均{avg:.2f}V"
+            if hi - lo < 0.6:
+                print(head + f"\n     CONST  ほぼ一定({avg:.1f}V)")
+                continue
+            th, hys = (lo + hi) / 2, (hi - lo) * 0.15
+            segs, lvl, start = [], v[0] > th, 0
+            for i, x in enumerate(v):
+                if (lvl and x < th - hys) or (not lvl and x > th + hys):
+                    segs.append(("H" if lvl else "L", round((i - start) * dt_us), not segs))
+                    lvl, start = not lvl, i
+            segs.append(("H" if lvl else "L", round((len(v) - start) * dt_us), True))
+            print(head + f"  (Low≒{lo:.1f}V / High≒{hi:.1f}V)")
+            print("     " + analyze_ch(segs, "1" if v[0] > th else "0"))
+            wave, step = ascii_wave(v, lo, hi)
+            print(f"     波形(先頭 {step*100*dt_us/1000:.1f}ms):")
+            for i, row in enumerate(wave):
+                print(f"     {hi:5.1f}V|" if i == 0 else (f"     {lo:5.1f}V|" if i == len(wave) - 1 else "           |"), row, sep="")
+        if any(sorted(ch[c])[-1 - n // 100] - sorted(ch[c])[n // 100] >= 0.6 and dt_us > 20 for c in "AB"):
+            print("  ※ 1点が約25µsなので、100µsより短い区間の長さは目安。細かい通信はロジアナで確認する")
+
+
 def main():
     a = sys.argv[1:]
+    if a and a[0] == "scope":
+        # scope <label> [ms] で記録、scope <file...> で保存済みを再解析
+        if len(a) >= 2 and os.path.exists(a[1]):
+            scope_analyze(a[1:])
+        elif len(a) >= 2:
+            scope_analyze([scope_rec(a[1], int(a[2]) if len(a) > 2 else 200)])
+        else:
+            sys.exit("使い方: ledsig.py scope <label> [ms]  /  ledsig.py scope <file...>")
+        return
     if not a or a[0] not in ("rec", "analyze"):
         sys.exit(__doc__)
     if a[0] == "rec":
