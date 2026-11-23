@@ -28,7 +28,8 @@ import statistics as st
 import sys
 import time
 
-PORT = os.environ.get("LEDSIG_PORT", "/dev/cu.usbmodem5C630050101")
+import glob as _glob
+PORT = os.environ.get("LEDSIG_PORT") or (sorted(_glob.glob("/dev/cu.usbmodem*")) or ["/dev/cu.usbmodem5C630050101"])[0]
 LOGDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "logs", "ledsig")
 STD_BAUDS = [1200, 2400, 4800, 9600, 10417, 19200, 20000, 38400, 57600, 115200]
 
