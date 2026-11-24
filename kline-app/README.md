@@ -62,22 +62,46 @@ ECM(0x10) の IOControl を **全LID 0x00-0x27 × 全IOCP 0x00-0xFF** で総当�
 
 - Honda Fit GK5 RS MT (型式 GK5)
 - アリエクの FT232RL + L9637D OBD2 USB ケーブル — ELM327 エミュではなく、 純粋な K-Line トランシーバ
-- CAN アダプタ: Geschwister Schneider / candleLight 系 (`gs_usb`, USB ID `1d50:606f`)。 Linux カーネルが `can0` としてネイティブ認識する SocketCAN デバイス (slcan 不要)
-- Linux ホスト (Ubuntu/Debian で動作確認)
+- ホスト: **macOS (Apple Silicon) で動作確認済み**。 Linux (Ubuntu/Debian) でも動く
 
-## 起動
+K-Line 側は pyserial だけで完結するので、 OS 差はシリアルポート名しかない。 CAN 側 (`../can-live/`) の macOS 事情は別なので [../docs/macos-can.md](../docs/macos-can.md) 参照。
+
+## 起動 (macOS)
 
 ```bash
 git clone https://github.com/ritogk/fit-gk-kaiseki.git
 cd fit-gk-kaiseki
-python3 -m virtualenv .venv          # venv はリポジトリルート共有 (can-live と同居)
-.venv/bin/pip install -r kline-app/requirements.txt
-./run-kline.sh                       # または cd kline-app && ./run.sh
+
+# venv はリポジトリルート共有 (can-live と同居)。3.10+ 必須 (`X | None` 記法を使うため)
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -r kline-app/requirements.txt
 ```
 
-`run.sh` はポート 8000/5173 の既存プロセスを kill してから、API サーバー (uvicorn, port 8000) と Web フロントエンド (Vite, port 5173) を同時に起動する。
+ケーブルを挿してポート名を確認する。 FTDI なので `cu.usbserial-` + 個体シリアルになる (ケーブルを変えない限り不変):
 
-シリアルポートのパーミッションが要る (`/dev/ttyUSB0`):
+```bash
+ls /dev/cu.usbserial-*
+# 例: /dev/cu.usbserial-A50285BI
+```
+
+起動:
+
+```bash
+cd kline-app
+KLINE_PORT=/dev/cu.usbserial-A50285BI ../.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+ブラウザで `http://127.0.0.1:8000/` 開けば UI、 `/docs` で Swagger。
+
+`web/dist` はビルド済みで FastAPI が `/` にマウントするため、 **`npm install` も Vite も要らない**。 フロントを触る時だけ別ターミナルで `cd web && npm install && npx vite --port 5173`。
+
+> `./run.sh` (および `../run-kline.sh`) は Linux 向け。 デフォルトポートが `/dev/ttyUSB0` 固定で、 かつ `npx vite` を叩くので `web/node_modules` が無いと落ちる。 macOS では上の uvicorn 直起動を使う。
+
+### ポートのパーミッション
+
+macOS では `/dev/cu.usbserial-*` が `crw-rw-rw-` で生えるので **何もしなくてよい**。
+
+Linux の場合のみ以下が要る:
 
 ```bash
 sudo chmod 666 /dev/ttyUSB0          # USB抜き差し毎に必要
@@ -85,59 +109,80 @@ sudo chmod 666 /dev/ttyUSB0          # USB抜き差し毎に必要
 sudo usermod -aG dialout $USER && newgrp dialout
 ```
 
-別ポートなら `KLINE_PORT=/dev/ttyUSB1 ./run.sh`。
-
-ブラウザで `http://127.0.0.1:8000/` 開けば UI、 `/docs` で Swagger。
-
 ## CAN 接続 (B-CAN / F-CAN)
 
-K-Line で届かない領域（ミラー/パワーウインドウ等の B-CAN 信号）を狙うための CAN 側のつなぎ方。 アダプタによって 2 パターンある。
+K-Line で届かない領域（ミラー/パワーウインドウ等の B-CAN 信号）を狙うための CAN 側のつなぎ方。
 
-以下は Linux 前提。 macOS で動かす場合は SocketCAN が使えないため python-can の `gs_usb` バックエンドに切り替える必要がある。 調査記録・必要なパッチ・手順は [../docs/macos-can.md](../docs/macos-can.md)。 実ハード無しでパイプラインを検証するには `../can-live/vbus_test.py`。
-
-### パターン A: ネイティブ SocketCAN ← 本リポジトリで使用中
-
-`gs_usb` (candleLight 系) アダプタはカーネルが `can0` として認識するので、 ビットレートを指定して up するだけ。 `slcand` は不要。
+アダプタは Geschwister Schneider / candleLight 系 (USB ID `1d50:606f`)。 **macOS では python-can の `gs_usb` バックエンドを使う** — SocketCAN は Linux カーネル機能なので macOS には存在せず、`ip` / `candump` / `cansend` も入らない。 gs_usb は libusb 経由のユーザ空間実装なので、 カーネル側の準備なしにそのまま動く。
 
 ```bash
-# 認識確認 (lsusb に "Geschwister Schneider CAN adapter"、ip link に can0 が出る)
-lsusb | grep -i can
-ip -d link show can0
-
-# B-CAN (ミラー/パワーウインドウ。Honda 低速 = 125k)
-sudo ip link set can0 up type can bitrate 125000
-# F-CAN (パワートレイン/シャシ。高速 = 500k)
-sudo ip link set can0 up type can bitrate 500000
-
-candump -t d can0                 # 受信
-cansend can0 '123#DEADBEEF'       # 送信
-sudo ip link set can0 down        # 終了 / ビットレート変更前
+brew install libusb
+uv pip install --python .venv/bin/python gs_usb pyusb
 ```
 
-### パターン B: slcan (FTDI シリアル型 CANUSB アダプタの場合 / 本機では不要)
+### 検出確認
 
 ```bash
-sudo slcand -o -c -s4 /dev/ttyUSBx can0   # -s4=125k, -s6=500k
-sudo ip link set can0 up
+.venv/bin/python -c "from gs_usb.gs_usb import GsUsb; print(GsUsb.scan())"
 ```
+
+1台以上返れば OK。 `[]` ならアダプタ未接続。 macOS 固有の権限設定・ドライバ署名・Zadig 相当の作業はいずれも不要。
+
+### 受信 / 送信 / ログ
+
+can-utils (`candump` / `cansend` / `canplayer` / `cangw`) は Linux 専用だが、 **python-can が同等の CLI を同梱している**。 venv に入るのでそのまま使える。
+
+```bash
+# 受信を流し見 (candump 相当)
+.venv/bin/can_viewer -i gs_usb -c 0 --bitrate 500000
+
+# ログ記録 (candump -l 相当)。Ctrl+C で停止
+.venv/bin/can_logger -i gs_usb -c 0 --bitrate 500000 -f drive.log
+
+# 再生 (canplayer 相当)
+.venv/bin/can_player -i gs_usb -c 0 --bitrate 500000 drive.log
+```
+
+ビットレートは `ip link` で事前に設定するのではなく、 **起動時に `--bitrate` で渡す**。 これが SocketCAN との一番大きな運用差。 バスを変えるときはプロセスを立て直す。
+
+- **B-CAN** (ミラー/パワーウインドウ。Honda 低速): `--bitrate 125000`
+- **F-CAN** (パワートレイン/シャシ): `--bitrate 500000`
+
+送信は python から:
+
+```python
+import can
+bus = can.interface.Bus(interface="gs_usb", channel=0, index=0, bitrate=500000)
+bus.send(can.Message(arbitration_id=0x123, data=b"\xde\xad\xbe\xef", is_extended_id=False))
+```
+
+ISO-TP / UDS も macOS で通る。 Linux カーネルモジュール `can-isotp.ko` は不要で、 `can-isotp` パッケージの純 Python 実装が gs_usb の上に載る（仮想バスで往復検証済み）。
 
 ### ビットレートの見分け方
 
-`ip link` を up した後 `ip -s -d link show can0` で状態を見る:
+`ip -s -d link show can0` に相当する状態カウンタは gs_usb には無いので、 **フレームが出るかどうかで判断する**:
 
-- **`ERROR-ACTIVE` でフレームが流れる** → ビットレート正解。バスに乗れている。
-- **`ERROR-PASSIVE` / `error-pass` カウンタが激増、RX dropped が増える** → バスは生きているがビットレートが不一致。 down してから別のレートで up し直す。
-- **完全に無音 (`candump` が何も出ない)** → 配線未接続、あるいは挿している箇所にそのバスが来ていない。
+- `can_viewer` にフレームが流れる → ビットレート正解
+- 完全に無音 → レート不一致か、 配線未接続か、 挿した箇所にそのバスが来ていない
 
-実測: F-CAN は **500k** で `091 / 130 / 140 / 158 / 17C / 1A4 / 1A6 / 1DC / 320 / 324 / 328` 等が流れることを確認済み。 B-CAN は **125k**（未確定、要検証）。 Honda は系統によって 33.3k (`83333`) のこともある。
+レートを変えて試すのが早い。 実測では F-CAN は **500k** で `091 / 130 / 140 / 158 / 17C / 1A4 / 1A6 / 1DC / 320 / 324 / 328` 等が流れる。 B-CAN は **125k** 想定（未確定、要検証）。 Honda は系統によって 33.3k のこともある。
 
-### ログ記録
+### Linux で動かす場合
+
+`gs_usb` アダプタは Linux カーネルが `can0` としてネイティブ認識するので、 SocketCAN をそのまま使う (`slcand` 不要):
 
 ```bash
-candump -l -L can0   # candump-<日時>.log に保存 (Ctrl+C で停止)。canplayer で再生可
+sudo ip link set can0 up type can bitrate 500000
+candump -t d can0
+cansend can0 '123#DEADBEEF'
+sudo ip link set can0 down        # ビットレート変更前
 ```
 
+> **Linux で `gs_usb` バックエンドを使ってはいけない。** `gs_usb.start()` がカーネルドライバを detach するため `can0` が消え、 candump 等と共存できなくなる。 Linux=socketcan / macOS=gs_usb で固定する。
+
 > 注意: B-CAN は OBD コネクタに出ていない車種があり、 その場合は車内ハーネス（MICU 近辺）への割り込みが必要。
+
+詳しい調査記録（性能実測、 Linux が本当に要る境界、 代替手段）は [../docs/macos-can.md](../docs/macos-can.md)。
 
 ## 同時点灯の仕組み
 
@@ -187,12 +232,18 @@ K-Line では個別ライトの消灯ができず、消灯時は `StopDiag`（�
 
 ## CLI で叩きたい場合
 
+`KLINE_PORT` は API サーバと同じものを渡す。 毎回書くのが面倒なら `export KLINE_PORT=/dev/cu.usbserial-A50285BI` しておく。
+
 ```bash
-.venv/bin/python scripts/fire.py list
-.venv/bin/python scripts/fire.py hazard 5
-.venv/bin/python scripts/play.py 3way 120 8
-.venv/bin/python scripts/play.py pattern 1D 0F 0.1 0.1 12
+export KLINE_PORT=/dev/cu.usbserial-A50285BI   # macOS。Linux は /dev/ttyUSB0
+
+../.venv/bin/python scripts/fire.py list
+../.venv/bin/python scripts/fire.py hazard 5
+../.venv/bin/python scripts/play.py 3way 120 8
+../.venv/bin/python scripts/play.py pattern 1D 0F 0.1 0.1 12
 ```
+
+シリアルポートはプロセス間で排他ではないので、 **API サーバを止めてから叩くこと**。 同時に開くと双方のフレームが混ざる。
 
 `research/` の中身は解析中に書き散らかしたスクリプトをそのまま残してある。 行き止まりも含めて、 後から再現するときの参考用。
 
@@ -219,7 +270,9 @@ research/   解析中の生スクリプト (失敗込み)
 ### ライブ演奏モード
 ![ライブモード](../docs/screenshots/live-mode.png)
 
-## Launchpad X でライブ演奏（物理パッドコントローラー）
+## Launchpad X でライブ演奏（物理パッドコントローラー / Linux 専用）
+
+> **このセクションは Linux 専用。** ブリッジ (`launchpad/main.c`) が ALSA シーケンサと `/dev/uinput` に直接依存しているため、 macOS ではビルドも実行もできない。 Mac でライブモードを使う場合はブラウザのキーボード入力で操作する（パッド配置と同じキーが割り当ててある）。
 
 Novation Launchpad X を USB 接続し、ライブモード用の物理キーボードとして使える。
 パッドを押すと対応するキーイベントが発火し、ブラウザのライブモードをそのまま操作できる。
@@ -227,6 +280,7 @@ Novation Launchpad X を USB 接続し、ライブモード用の物理キーボ
 ### 必要なもの
 
 - Novation Launchpad X（USB 接続）
+- Linux ホスト
 - ALSA 開発ライブラリ: `sudo apt install libasound2-dev`
 - root 権限（`/dev/uinput` へのアクセスに必要）
 

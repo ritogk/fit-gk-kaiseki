@@ -18,22 +18,57 @@
 - [docs/macos-can.md](docs/macos-can.md) — macOS で CAN アダプタを動かす調査記録
 - `docs/screenshots/` — UI スクリーンショット
 
-## 起動 (ルートから)
+## セットアップ
+
+Python venv はリポジトリルートの `.venv` を kline-app / can-live で共有する。 **Python 3.10+ が必須** (コードが `X | None` 記法を使うため)。
+
+```bash
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -r kline-app/requirements.txt -r can-live/requirements.txt
+```
+
+macOS で CAN も使うなら追加で:
+
+```bash
+brew install libusb
+uv pip install --python .venv/bin/python gs_usb pyusb
+```
+
+micro-control はファームウェア (Arduino IDE 2.x / arduino-cli) のため venv 不要。 書き込み手順は [micro-control/README.md](micro-control/README.md)。
+
+## 起動 (macOS)
+
+各サブプロジェクトの FastAPI がビルド済みフロント (`web/dist`) を `/` に配信するので、 **uvicorn 1本で UI まで出る**。 `npm install` も Vite も要らない。
+
+```bash
+# kline-app: K-Line 制御 UI → http://127.0.0.1:8000/
+cd kline-app
+KLINE_PORT=$(ls /dev/cu.usbserial-* | head -1) ../.venv/bin/uvicorn api.main:app --port 8000
+
+# can-live: F-CAN ライブ受信 → http://127.0.0.1:8100/
+#   ※ 実車受信には gs_usb への切り替えパッチが必要 (can-live/README.md 参照)
+cd can-live
+CAN_INTERFACE=gs_usb CAN_BITRATE=500000 ../.venv/bin/uvicorn server.main:app --port 8100
+```
+
+ルートの `run-*.sh` は **Linux 向け**。 `/dev/ttyUSB0` 固定・`ip link`・`npx vite` に依存しているため macOS では落ちる。
+
+## 起動 (Linux)
 
 ```bash
 ./run-kline.sh      # kline-app: API (8000) + Web (5173)
-./run-keyboard.sh   # kline-app: Launchpad キーボードブリッジ
-./run-canlive.sh    # can-live: WS サーバ (8100) + Web (5273)
+./run-keyboard.sh   # kline-app: Launchpad キーボードブリッジ (Linux 専用)
+./run-canlive.sh    # can-live: can0 を up → WS (8100) + Web (5273)
 ```
 
-Python venv はリポジトリルートの `.venv` を kline-app / can-live で共有:
+## OS ごとの対応状況
 
-```bash
-python3 -m virtualenv .venv
-.venv/bin/pip install -r kline-app/requirements.txt -r can-live/requirements.txt
-```
-
-micro-control はファームウェア (Arduino IDE 2.x) のため venv 不要。書き込み手順は [micro-control/README.md](micro-control/README.md)。
+| | macOS (Apple Silicon) | Linux (Ubuntu/Debian) |
+|---|---|---|
+| kline-app (K-Line 制御) | **動作確認済み**。ポートは `/dev/cu.usbserial-*` | 動作確認済み。ポートは `/dev/ttyUSB0` |
+| can-live (F-CAN 受信) | 要パッチ (`socketcan`→`gs_usb`, 約16行)。仮想バス検証は無改造で可 | **実車で受信確認済み** |
+| Launchpad ブリッジ | 不可 (ALSA / `/dev/uinput` 依存) | 動作確認済み |
+| CAN のツール類 | python-can 同梱 CLI (`can_viewer` / `can_logger` / `can_player`) | can-utils (`candump` / `cansend` / `canplayer`) |
 
 ## ライセンス
 
