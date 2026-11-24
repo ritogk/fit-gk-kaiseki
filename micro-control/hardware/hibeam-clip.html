@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ハイビーム クリップ直結実験</title>
+<style>
+:root { color-scheme: light; --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --sub:#5b6675; --line:#d5dae2;
+  --pw:#d9480f; --out:#c92a2a; --sig:#1971c2; --ctl:#2f9e44; --gnd:#343a40; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.7 -apple-system,"Hiragino Sans",sans-serif; }
+main { max-width:1020px; margin:0 auto; padding:24px 16px 48px; }
+h1 { font-size:22px; margin:0 0 6px; } h2 { font-size:16px; margin:26px 0 8px; }
+p { margin:6px 0; color:var(--sub); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; overflow-x:auto; }
+svg { width:100%; min-width:720px; height:auto; display:block; }
+.w { fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.pw { stroke:var(--pw); stroke-width:5; } .outw { stroke:var(--out); stroke-width:5; }
+.sigw { stroke:var(--sig); } .ctlw { stroke:var(--ctl); } .gndw { stroke:var(--gnd); }
+.dimw { stroke:#adb5bd; stroke-dasharray:4 4; } .lampx { stroke:#b08900; stroke-width:2; }
+.box { fill:#eef2f7; stroke:#8c98a8; stroke-width:1.5; }
+.bts { fill:#fff0f0; stroke:#c92a2a; stroke-width:2; }
+.q { fill:#e7f5ff; stroke:#1971c2; stroke-width:2; }
+.part { fill:#fff; stroke:#5b6675; stroke-width:1.5; }
+.lamp { fill:#fff3bf; stroke:#b08900; stroke-width:2; }
+.dot { fill:var(--ctl); } .dotg { fill:var(--gnd); }
+.ttl { font:700 15px -apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); }
+.lbl { font:12px -apple-system,"Hiragino Sans",sans-serif; fill:var(--sub); }
+.pin { font:700 12.5px -apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); }
+.dim { fill:#adb5bd; }
+.legend span { display:inline-block; margin-right:16px; font-size:13px; color:var(--sub); }
+.legend i { display:inline-block; width:22px; height:4px; border-radius:2px; vertical-align:middle; margin-right:6px; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media (max-width:640px) { .two { grid-template-columns:1fr; } }
+.st { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 16px; }
+.st b { display:block; margin-bottom:4px; }
+ol { margin:4px 0; padding-left:20px; color:var(--sub); }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th,td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:left; }
+th { color:var(--sub); font-weight:600; }
+
+.clip{fill:#fff4e6;stroke:#e67700;stroke-width:2}
+.cliplbl{font-size:11px;fill:#e67700;font-weight:600}
+.unplug{fill:#f1f3f5;stroke:#adb5bd;stroke-width:2;stroke-dasharray:6 4}
+.term{fill:#fff;stroke:#343a40;stroke-width:2}
+</style></head><body><main>
+<h1>ハイビームのランプ側へHW-039をクリップで直結する実験配線</h1>
+<p>ハイビームのコネクタを抜き、ランプ側の端子へHW-039の出力をワニ口クリップでつなぎます。車両側の配線は切り離したままなので、ダイオードもリレーも要らず、左右の回り込みも起きません。純正の線は一切加工しません。</p>
+<div class="card"><svg viewBox="0 0 1120 560" role="img" aria-label="ハイビームのランプ側端子へHW-039をクリップで直結する配線図">
+<rect x="40" y="140" width="170" height="270" rx="8" class="box"/><text x="125" y="166" class="ttl" text-anchor="middle">ESP32-S3</text><text x="125" y="430" class="lbl" text-anchor="middle">電源はPCのUSB</text>
+<text x="200" y="194" class="pin" text-anchor="end">3V3</text>
+<path d="M210 190 H400" class="w ctlw"/>
+<text x="200" y="234" class="pin" text-anchor="end">GPIO4</text>
+<path d="M210 230 H400" class="w sigw"/>
+<text x="200" y="274" class="pin" text-anchor="end">GPIO6</text>
+<path d="M210 270 H400" class="w sigw"/>
+<text x="200" y="314" class="pin" text-anchor="end">GPIO5</text>
+<path d="M210 310 H400" class="w ctlw"/>
+<text x="200" y="374" class="pin" text-anchor="end">GND</text>
+<path d="M210 370 H400" class="w gndw"/>
+<path d="M330 310 V335 H400" class="w ctlw"/><circle cx="330" cy="310" r="4" class="dot"/>
+<text x="305" y="222" class="lbl" text-anchor="middle">PWM(右)</text><text x="305" y="262" class="lbl" text-anchor="middle">PWM(左)</text><text x="270" y="302" class="lbl" text-anchor="middle">出力許可</text>
+<rect x="400" y="110" width="240" height="320" rx="10" class="bts"/><text x="520" y="136" class="ttl" text-anchor="middle">HW-039(IBT_2)</text><text x="520" y="154" class="lbl" text-anchor="middle">BTS7960 ×2</text>
+<text x="410" y="194" class="pin">VCC</text>
+<text x="410" y="234" class="pin">RPWM</text>
+<text x="410" y="274" class="pin">LPWM</text>
+<text x="410" y="314" class="pin">R_EN</text>
+<text x="410" y="339" class="pin">L_EN</text>
+<text x="410" y="374" class="pin">GND</text>
+<text x="410" y="410" class="lbl dim">R_IS・L_ISはつながない</text>
+<text x="630" y="194" class="pin" text-anchor="end">B+</text>
+<text x="630" y="254" class="pin" text-anchor="end">M+</text>
+<text x="630" y="314" class="pin" text-anchor="end">M−</text>
+<text x="630" y="374" class="pin" text-anchor="end">B−</text>
+<rect x="560" y="14" width="120" height="50" rx="8" class="box"/><text x="620" y="36" class="ttl" text-anchor="middle">バッテリー</text><text x="620" y="54" class="lbl" text-anchor="middle">12V +</text>
+<rect x="730" y="10" width="250" height="84" rx="8" class="box"/><text x="855" y="30" class="ttl" text-anchor="middle">ヒューズブロック(ATO/ATC)</text>
+<rect x="750" y="44" width="40" height="30" rx="5" class="part"/><text x="770" y="64" class="lbl" text-anchor="middle">15A</text>
+<rect x="806" y="44" width="40" height="30" rx="5" class="unplug"/><text x="826" y="64" class="lbl dim" text-anchor="middle">空き</text>
+<rect x="862" y="44" width="40" height="30" rx="5" class="unplug"/><text x="882" y="64" class="lbl dim" text-anchor="middle">空き</text>
+<rect x="918" y="44" width="40" height="30" rx="5" class="unplug"/><text x="938" y="64" class="lbl dim" text-anchor="middle">空き</text>
+<path d="M680 39 H705 V59 H730" class="w pw"/><text x="705" y="86" class="lbl" text-anchor="middle">共通+</text>
+<path d="M770 74 V190 H640" class="w pw"/><text x="780" y="140" class="lbl">1番(15A)からB+へ</text>
+<path d="M640 250 H868 V230 H912" class="w outw"/>
+<path d="M640 310 H700 V400 H912" class="w outw"/>
+<rect x="789" y="242" width="22" height="16" rx="4" class="clip"/><text x="800" y="238" class="cliplbl" text-anchor="middle">クリップ</text>
+<rect x="789" y="392" width="22" height="16" rx="4" class="clip"/><text x="800" y="388" class="cliplbl" text-anchor="middle">クリップ</text>
+<rect x="912" y="210" width="46" height="80" rx="6" class="box"/><circle cx="924" cy="230" r="6" class="term"/><text x="938" y="234" class="pin">+</text><circle cx="924" cy="270" r="6" class="term"/><text x="938" y="274" class="pin">−</text><path d="M958 230 H982 M958 270 H982" class="w"/><circle cx="1008" cy="250" r="26" class="lamp"/><path d="M991 233 L1025 267 M1025 233 L991 267" class="w lampx"/><path d="M982 230 V240 M982 270 V260" class="w"/><text x="972" y="200" class="ttl" text-anchor="middle">ハイビーム 右</text><text x="935" y="306" class="lbl" text-anchor="middle">ランプ側</text>
+<rect x="912" y="380" width="46" height="80" rx="6" class="box"/><circle cx="924" cy="400" r="6" class="term"/><text x="938" y="404" class="pin">+</text><circle cx="924" cy="440" r="6" class="term"/><text x="938" y="444" class="pin">−</text><path d="M958 400 H982 M958 440 H982" class="w"/><circle cx="1008" cy="420" r="26" class="lamp"/><path d="M991 403 L1025 437 M1025 403 L991 437" class="w lampx"/><path d="M982 400 V410 M982 440 V430" class="w"/><text x="972" y="370" class="ttl" text-anchor="middle">ハイビーム 左</text><text x="935" y="476" class="lbl" text-anchor="middle">ランプ側</text>
+<rect x="1040" y="98" width="64" height="44" rx="6" class="unplug"/><text x="1072" y="118" class="lbl dim" text-anchor="middle">車両側</text><text x="1072" y="134" class="lbl dim" text-anchor="middle">抜いて放置</text>
+<rect x="1040" y="498" width="64" height="44" rx="6" class="unplug"/><text x="1072" y="518" class="lbl dim" text-anchor="middle">車両側</text><text x="1072" y="534" class="lbl dim" text-anchor="middle">抜いて放置</text>
+<text x="1072" y="160" class="lbl dim" text-anchor="middle">(右)</text><text x="1072" y="488" class="lbl dim" text-anchor="middle">(左)</text>
+<path d="M912 270 H880 V500 M912 440 H880" class="w gndw"/><circle cx="880" cy="440" r="4" class="dotg"/>
+<rect x="885" y="262" width="22" height="16" rx="4" class="clip"/><text x="896" y="258" class="cliplbl" text-anchor="middle">クリップ</text>
+<rect x="885" y="432" width="22" height="16" rx="4" class="clip"/><text x="896" y="428" class="cliplbl" text-anchor="middle">クリップ</text>
+<path d="M640 370 H670 V500 H880 V516" class="w gndw"/><circle cx="880" cy="500" r="4" class="dotg"/>
+<path d="M866 516 H894 M871 521 H889 M876 526 H884" class="w gndw"/>
+<text x="860" y="540" class="lbl" text-anchor="end">バッテリー−(車体)</text>
+</svg></div>
+<p class="legend"><span><i style="background:var(--pw)"></i>12V入力</span><span><i style="background:var(--out)"></i>ランプへの出力</span><span><i style="background:var(--sig)"></i>PWM信号</span><span><i style="background:var(--ctl)"></i>3.3V・出力許可</span><span><i style="background:var(--gnd)"></i>GND</span><span><i style="background:#e67700"></i>ワニ口クリップ</span></p>
+
+<h2>つなぎ方</h2>
+<div class="card"><table>
+<tr><th>HW-039</th><th>つなぐ先</th></tr>
+<tr><td>VCC</td><td>ESP 3V3</td></tr>
+<tr><td>RPWM</td><td>ESP GPIO4(右の明るさ)</td></tr>
+<tr><td>LPWM</td><td>ESP GPIO6(左の明るさ)。pinout.mdの更新前は、GNDに落として右だけで試す</td></tr>
+<tr><td>R_EN・L_EN</td><td>ESP GPIO5(2本を束ねる)</td></tr>
+<tr><td>GND</td><td>ESP GND</td></tr>
+<tr><td>B+</td><td>ヒューズブロックの1番(15A)。ブロックの共通+はバッテリー+へ</td></tr>
+<tr><td>B−</td><td>バッテリー−(車体)</td></tr>
+<tr><td>M+</td><td>クリップで、右ハイビームのランプ側+端子</td></tr>
+<tr><td>M−</td><td>クリップで、左ハイビームのランプ側+端子</td></tr>
+<tr><td>(ランプ側−端子)</td><td>クリップで、左右ともバッテリー−(車体)</td></tr>
+</table></div>
+
+<h2>つなぐ前の確認</h2>
+<div class="two">
+  <div class="st"><b>端子の極性</b><ol>
+    <li>ランプ側コネクタのどちらが+かを、テスターかバルブの刻印で確認する。</li>
+    <li>ハロゲンは逆でも点く。LEDユニットは逆だと点かず、壊れる可能性がある。</li></ol></div>
+  <div class="st"><b>ショート対策</b><ol>
+    <li>端子の間隔が狭いので、+と−のクリップが触れない向きでつなぐ。</li>
+    <li>絶縁カバー付きのクリップを使うか、平型端子を挿してからつかむ。</li>
+    <li>B+は必ずヒューズブロック経由でつなぐ。</li></ol></div>
+</div>
+
+<h2>動き方</h2>
+<div class="two">
+  <div class="st"><b>GPIO5 = HIGH(出力許可)</b><ol>
+    <li>GPIO4のPWMで、右の明るさが決まる。</li><li>GPIO6のPWMで、左の明るさが決まる。</li><li>PWMが0%なら、そのランプは消える。</li></ol></div>
+  <div class="st"><b>GPIO5 = LOW</b><ol>
+    <li>両方の出力が切り離される。</li><li>PWMの値に関係なく、両方とも消える。</li><li>ESPの起動中は、必ずこの状態にする。</li></ol></div>
+</div>
+<p>最初は低いデューティ(10%程度)で短時間だけ点け、ちらつきや異音がないことを確認してから上げます。LEDユニットは内蔵の駆動回路がPWMを受け付けない場合があるため、ちらつくときは周波数(1kHz前後)を変えて試します。</p>
+</main></body></html>

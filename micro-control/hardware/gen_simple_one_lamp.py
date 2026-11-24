@@ -1,0 +1,147 @@
+# -*- coding: utf-8 -*-
+# ESP32 + BTS6143D 1個でランプ1灯を点ける最小構成の概念図(ライトモード専用)
+import io, os
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "simple-one-lamp.html")
+
+def res_h(x, y, label):
+    return (f'<rect x="{x}" y="{y-9}" width="56" height="18" rx="3" class="part"/>'
+            f'<text x="{x+28}" y="{y-16}" class="lbl" text-anchor="middle">{label}</text>')
+
+def res_v(x, y, label):
+    return (f'<rect x="{x-9}" y="{y}" width="18" height="50" rx="3" class="part"/>'
+            f'<text x="{x+16}" y="{y+29}" class="lbl">{label}</text>')
+
+def gnd(x, y):
+    return (f'<path d="M{x-14} {y} H{x+14} M{x-9} {y+5} H{x+9} M{x-4} {y+10} H{x+4}" class="w gndw"/>')
+
+svg = f'''
+<svg viewBox="0 0 980 600" role="img" aria-label="1灯点灯の配線図">
+  <!-- 12V(太い線) -->
+  <path d="M160 90 H230 M290 90 H420" class="w pw"/>
+  <path d="M620 90 H770" class="w outw"/>
+  <path d="M830 90 H890 V150" class="w gndw"/>
+  {gnd(890,150)}
+  <text x="890" y="182" class="lbl" text-anchor="middle">車体(GND)</text>
+
+  <rect x="40" y="60" width="120" height="60" rx="8" class="box"/>
+  <text x="100" y="86" class="ttl" text-anchor="middle">バッテリー</text>
+  <text x="100" y="106" class="lbl" text-anchor="middle">12V +</text>
+
+  <rect x="230" y="78" width="60" height="24" rx="5" class="part"/>
+  <text x="260" y="95" class="lbl" text-anchor="middle">5A</text>
+  <text x="260" y="70" class="lbl" text-anchor="middle">ヒューズ</text>
+
+  <!-- BTS -->
+  <rect x="420" y="50" width="200" height="200" rx="10" class="bts"/>
+  <text x="520" y="140" class="ttl" text-anchor="middle">BTS6143D</text>
+  <text x="520" y="162" class="lbl" text-anchor="middle">12Vを入り切りする</text>
+  <text x="520" y="180" class="lbl" text-anchor="middle">大電流スイッチ</text>
+  <text x="430" y="84" class="pin">タブ(3番)</text>
+  <text x="430" y="104" class="lbl">12V入力</text>
+  <text x="610" y="84" class="pin" text-anchor="end">1番+5番</text>
+  <text x="610" y="104" class="lbl" text-anchor="end">出力(2本つなぐ)</text>
+  <text x="470" y="240" class="pin" text-anchor="middle">2番(IN)</text>
+  <text x="570" y="240" class="pin dim" text-anchor="middle">4番(IS)</text>
+  <path d="M570 250 V275" class="w dimw"/>
+  <text x="582" y="280" class="lbl dim">今回はつながない</text>
+
+  <!-- ランプ -->
+  <circle cx="800" cy="90" r="30" class="lamp"/>
+  <path d="M780 70 L820 110 M820 70 L780 110" class="w lampx"/>
+  <text x="800" y="140" class="ttl" text-anchor="middle">ランプ</text>
+
+  <!-- IN → R_IN → トランジスタ -->
+  <path d="M470 250 V290 M470 340 V392" class="w sigw"/>
+  {res_v(470,290,"R_IN 1kΩ")}
+  <rect x="425" y="392" width="90" height="70" rx="10" class="q"/>
+  <text x="470" y="422" class="ttl" text-anchor="middle">Q1</text>
+  <text x="470" y="442" class="lbl" text-anchor="middle">トランジスタ</text>
+  <text x="522" y="402" class="lbl">C</text>
+  <text x="522" y="462" class="lbl">E</text>
+  <text x="414" y="418" class="lbl" text-anchor="end">B</text>
+  <path d="M470 462 V540" class="w gndw"/>
+
+  <!-- ESP → R_B → ベース -->
+  <rect x="40" y="380" width="150" height="130" rx="8" class="box"/>
+  <text x="115" y="408" class="ttl" text-anchor="middle">ESP32-S3</text>
+  <text x="180" y="431" class="pin" text-anchor="end">GPIO</text>
+  <text x="180" y="495" class="pin" text-anchor="end">GND</text>
+  <path d="M190 427 H250 M306 427 H425" class="w ctlw"/>
+  {res_h(250,427,"R_B 10kΩ")}
+  <circle cx="360" cy="427" r="4" class="dot"/>
+  <path d="M360 427 V455 M360 505 V540" class="w ctlw"/>
+  {res_v(360,455,"R_BE 47kΩ")}
+
+  <!-- GND 共通線 -->
+  <path d="M190 491 H215 V540 H700 V556" class="w gndw"/>
+  <circle cx="360" cy="540" r="4" class="dotg"/><circle cx="470" cy="540" r="4" class="dotg"/>
+  {gnd(700,556)}
+  <text x="722" y="566" class="lbl">車体(GND)。ESPのGNDと車体を必ずつなぐ</text>
+</svg>'''
+
+html = f'''<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1灯点灯の最小配線</title>
+<style>
+:root {{ color-scheme: light; --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --sub:#5b6675; --line:#d5dae2;
+  --pw:#d9480f; --out:#c92a2a; --sig:#1971c2; --ctl:#2f9e44; --gnd:#343a40; }}
+body {{ margin:0; background:var(--bg); color:var(--ink); font:15px/1.7 -apple-system,"Hiragino Sans",sans-serif; }}
+main {{ max-width:1020px; margin:0 auto; padding:24px 16px 48px; }}
+h1 {{ font-size:22px; margin:0 0 6px; }} h2 {{ font-size:16px; margin:26px 0 8px; }}
+p {{ margin:6px 0; color:var(--sub); }}
+.card {{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; overflow-x:auto; }}
+svg {{ width:100%; min-width:720px; height:auto; display:block; }}
+.w {{ fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }}
+.pw {{ stroke:var(--pw); stroke-width:5; }} .outw {{ stroke:var(--out); stroke-width:5; }}
+.sigw {{ stroke:var(--sig); }} .ctlw {{ stroke:var(--ctl); }} .gndw {{ stroke:var(--gnd); }}
+.dimw {{ stroke:#adb5bd; stroke-dasharray:4 4; }} .lampx {{ stroke:#b08900; stroke-width:2; }}
+.box {{ fill:#eef2f7; stroke:#8c98a8; stroke-width:1.5; }}
+.bts {{ fill:#fff0f0; stroke:#c92a2a; stroke-width:2; }}
+.q {{ fill:#e7f5ff; stroke:#1971c2; stroke-width:2; }}
+.part {{ fill:#fff; stroke:#5b6675; stroke-width:1.5; }}
+.lamp {{ fill:#fff3bf; stroke:#b08900; stroke-width:2; }}
+.dot {{ fill:var(--ctl); }} .dotg {{ fill:var(--gnd); }}
+.ttl {{ font:700 15px -apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); }}
+.lbl {{ font:12px -apple-system,"Hiragino Sans",sans-serif; fill:var(--sub); }}
+.pin {{ font:700 12.5px -apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); }}
+.dim {{ fill:#adb5bd; }}
+.legend span {{ display:inline-block; margin-right:16px; font-size:13px; color:var(--sub); }}
+.legend i {{ display:inline-block; width:22px; height:4px; border-radius:2px; vertical-align:middle; margin-right:6px; }}
+.two {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }}
+@media (max-width:640px) {{ .two {{ grid-template-columns:1fr; }} }}
+.st {{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 16px; }}
+.st b {{ display:block; margin-bottom:4px; }}
+ol {{ margin:4px 0; padding-left:20px; color:var(--sub); }}
+table {{ border-collapse:collapse; width:100%; font-size:14px; }}
+th,td {{ border-bottom:1px solid var(--line); padding:6px 8px; text-align:left; }}
+th {{ color:var(--sub); font-weight:600; }}
+</style></head><body><main>
+<h1>ESP32とBTS 1個でランプ1灯を点ける配線</h1>
+<p>太い線が12Vの大電流、細い線がESPの弱い信号です。トランジスタQ1は、BTSの2番ピンとGNDの間に入るスイッチです。</p>
+<div class="card">{svg}</div>
+<p class="legend"><span><i style="background:var(--pw)"></i>12V入力</span><span><i style="background:var(--out)"></i>ランプへの出力</span><span><i style="background:var(--sig)"></i>BTSの2番(IN)</span><span><i style="background:var(--ctl)"></i>ESPの信号</span><span><i style="background:var(--gnd)"></i>GND</span></p>
+
+<h2>動き方</h2>
+<div class="two">
+  <div class="st"><b>点灯(GPIO = HIGH)</b><ol>
+    <li>ESPがGPIOに3.3Vを出す。</li><li>Q1がつながり、2番ピンがGNDに落ちる。</li><li>BTSがONになり、12Vがランプへ流れる。</li></ol></div>
+  <div class="st"><b>消灯(GPIO = LOW)</b><ol>
+    <li>ESPがGPIOを0Vにする。</li><li>Q1が切れ、2番ピンがどこにもつながらなくなる。</li><li>BTSがOFFになり、ランプが消える。</li></ol></div>
+</div>
+<p>消灯中の2番ピンには12V近い電圧が出ます。ESPのピンは3.3Vまでしか耐えられないので、直接つながずQ1を間に入れます。</p>
+
+<h2>使う部品</h2>
+<div class="card"><table>
+<tr><th>部品</th><th>値</th><th>役目</th></tr>
+<tr><td>Q1</td><td>NPNトランジスタ(2SC1815など)</td><td>2番ピンをGNDへつなぐスイッチ</td></tr>
+<tr><td>R_IN</td><td>1kΩ</td><td>2番ピンに流れる電流を抑える</td></tr>
+<tr><td>R_B</td><td>10kΩ</td><td>ESPからQ1へ流す電流を抑える</td></tr>
+<tr><td>R_BE</td><td>47kΩ</td><td>ESPの起動中にQ1が勝手に入らないようにする</td></tr>
+<tr><td>ヒューズ</td><td>5A</td><td>配線がショートしたときに切れる</td></tr>
+</table></div>
+<p>2SC1815の足は、平らな面を手前にして左からE・C・Bです。12VはBTSのタブ(または導通を確認した3番ピン)へ入れ、1番と5番は必ず2本ともつなぎます。</p>
+</main></body></html>'''
+with io.open(OUT, "w", encoding="utf-8") as f:
+    f.write(html)
+print("wrote", OUT)

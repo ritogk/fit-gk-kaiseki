@@ -254,34 +254,12 @@ svg = (f'<svg id="schematic" viewBox="0 0 {W} {H}" role="img" aria-label="1ç¯ã‚
 # ============ HTML ============
 CSS = """
   :root {
+    color-scheme: light;
     --bg: #f2f4f3; --surface: #ffffff; --box: #f5f7f6; --box-line: #c3cdc8;
     --ink: #212723; --muted: #5e6963; --line: #dbe1de; --accent: #a87413; --dot: #e2e7e4;
     --shadow: 0 10px 30px rgba(20, 30, 25, 0.18);
     --w-pwm: #2f6fb2; --w-en: #2f8659; --w-is: #7e58be; --w-vcc: #c07a16;
     --w-gnd: #78827c; --w-pos: #c2443a; --w-neg: #464d49; --w-stock: #6f5340;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #141816; --surface: #1c211f; --box: #242a27; --box-line: #47514c;
-      --ink: #e6eae7; --muted: #949e98; --line: #323a36; --accent: #d9a644; --dot: #262d2a;
-      --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      --w-pwm: #6faee6; --w-en: #5fbe8b; --w-is: #ad8fe0; --w-vcc: #e2a952;
-      --w-gnd: #8d968f; --w-neg: #aab3ae; --w-pos: #e4756a; --w-stock: #bfa083;
-    }
-  }
-  :root[data-theme="light"] {
-    --bg: #f2f4f3; --surface: #ffffff; --box: #f5f7f6; --box-line: #c3cdc8;
-    --ink: #212723; --muted: #5e6963; --line: #dbe1de; --accent: #a87413; --dot: #e2e7e4;
-    --shadow: 0 10px 30px rgba(20, 30, 25, 0.18);
-    --w-pwm: #2f6fb2; --w-en: #2f8659; --w-is: #7e58be; --w-vcc: #c07a16;
-    --w-gnd: #78827c; --w-pos: #c2443a; --w-neg: #464d49; --w-stock: #6f5340;
-  }
-  :root[data-theme="dark"] {
-    --bg: #141816; --surface: #1c211f; --box: #242a27; --box-line: #47514c;
-    --ink: #e6eae7; --muted: #949e98; --line: #323a36; --accent: #d9a644; --dot: #262d2a;
-    --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    --w-pwm: #6faee6; --w-en: #5fbe8b; --w-is: #ad8fe0; --w-vcc: #e2a952;
-    --w-gnd: #8d968f; --w-pos: #e4756a; --w-neg: #aab3ae; --w-stock: #bfa083;
   }
   * { box-sizing: border-box; }
   body {

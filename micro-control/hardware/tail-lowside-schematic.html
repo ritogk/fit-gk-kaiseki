@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>テール2灯 GND側調光</title>
+<style>
+:root { color-scheme: light; --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --sub:#5b6675; --line:#d5dae2;
+  --pw:#d9480f; --sig:#1971c2; --gnd:#343a40; --sw:#2b8a3e; }
+* { -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.7 -apple-system,"Hiragino Sans",sans-serif; }
+main { max-width:1040px; margin:0 auto; padding:24px 16px 48px; }
+h1 { font-size:22px; margin:0 0 6px; } h2 { font-size:16px; margin:26px 0 8px; }
+p { margin:6px 0; color:var(--sub); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; overflow-x:auto; }
+svg { width:100%; min-width:820px; height:auto; display:block; }
+.w { fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.pw { stroke:var(--pw); stroke-width:4; } .sigw { stroke:var(--sig); } .gndw { stroke:var(--gnd); stroke-width:4; }
+.sgnd { stroke:#748ffc; stroke-dasharray:6 4; }
+.sw { stroke:var(--sw); }
+.dim { stroke:#adb5bd; stroke-dasharray:5 5; }
+.brd { fill:#f1f8ff; stroke:#1971c2; stroke-width:1.5; stroke-dasharray:6 4; }
+.lampb { fill:#fff9db; stroke:#b08900; stroke-width:2; }
+.espb { fill:#eef2f7; stroke:#8c98a8; stroke-width:1.5; }
+.opto { fill:#fff; stroke:#1971c2; stroke-width:1.5; }
+.fuse { fill:#fff; stroke:var(--pw); stroke-width:2; }
+.dot { fill:var(--gnd); } .dotp { fill:var(--pw); }
+text { font-family:-apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); font-size:14px; }
+.t { font-weight:700; font-size:15px; } .s { font-size:12px; fill:var(--sub); } .pin { font-size:12px; font-weight:700; }
+table { border-collapse:collapse; width:100%; background:#fff; font-size:14px; }
+th,td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; } th { background:#eef2f7; }
+.lg { display:inline-block; width:22px; height:4px; vertical-align:middle; margin:0 6px 0 14px; }
+@media print { body { background:#fff; } main { padding:0; } .card { border:none; } svg { min-width:0; } }
+</style></head><body><main>
+<h1>テール左右2灯をGND側で調光する回路図</h1>
+<p>テールの①には車の12Vを常時かけ、ランプの③(戻り)をD4184基板でバッテリー−へつないだり切ったりして明るさを変えます。ESP32はMacからUSBで給電し、基板の中のフォトカプラ越しに信号だけを送ります。車のカプラーは抜いて使う、停車中のテスト専用の回路です。</p>
+<p>
+<span class="lg" style="background:var(--pw)"></span>12V(ヒューズ後)
+<span class="lg" style="background:var(--gnd)"></span>ランプ戻り・バッテリー−
+<span class="lg" style="background:var(--sig)"></span>ESPの信号(TRIG)
+<span class="lg" style="background:#748ffc"></span>ESPのGND(車とは別)
+</p>
+
+<div class="card">
+<svg viewBox="0 0 960 660" role="img" aria-label="テール2灯GND側調光の回路図">
+  <!-- ===== battery ===== -->
+  <text class="t" x="20" y="200">車の12V</text>
+  <text class="t" x="20" y="220">バッテリー</text>
+  <path class="w pw" d="M110 90 V280"/>
+  <line x1="88" y1="280" x2="132" y2="280" stroke="#1c2430" stroke-width="4"/>
+  <line x1="98" y1="294" x2="122" y2="294" stroke="#1c2430" stroke-width="4"/>
+  <line x1="88" y1="308" x2="132" y2="308" stroke="#1c2430" stroke-width="4"/>
+  <line x1="98" y1="322" x2="122" y2="322" stroke="#1c2430" stroke-width="4"/>
+  <text class="pin" x="138" y="282" style="fill:var(--pw)">＋</text>
+  <text class="pin" x="138" y="328">−</text>
+  <path class="w gndw" d="M110 322 V480"/>
+
+  <!-- ===== + rail with fuse ===== -->
+  <path class="w pw" d="M110 90 H170"/>
+  <rect class="fuse" x="170" y="76" width="80" height="28" rx="5"/>
+  <text class="s" x="182" y="95" style="fill:var(--pw)">ヒューズ5A</text>
+  <path class="w pw" d="M250 90 H790"/>
+  <circle class="dotp" cx="500" cy="90" r="5"/>
+  <path class="w pw" d="M500 90 V140"/>
+  <path class="w pw" d="M790 90 V140"/>
+  <text class="s" x="268" y="80">バッテリー＋から直接(車体のヒューズボックスは通さない)</text>
+
+  <!-- ===== lamp L ===== -->
+  <rect class="lampb" x="430" y="140" width="140" height="110" rx="10"/>
+  <text class="t" x="370" y="170">左テール</text>
+  <text class="pin" x="508" y="158">①</text>
+  <polygon points="485,180 515,180 500,206" fill="#ffe066" stroke="#b08900" stroke-width="2"/>
+  <line x1="485" y1="208" x2="515" y2="208" stroke="#b08900" stroke-width="2.5"/>
+  <path d="M500 140 V180 M500 208 V250" stroke="#b08900" stroke-width="2"/>
+  <text class="pin" x="508" y="244">③</text>
+  <text class="s" x="440" y="232">LED</text>
+  <path class="w dim" d="M570 195 H600"/><text class="s" x="575" y="186">② 未接続</text>
+
+  <!-- ===== lamp R ===== -->
+  <rect class="lampb" x="720" y="140" width="140" height="110" rx="10"/>
+  <text class="t" x="870" y="170">右テール</text>
+  <text class="pin" x="798" y="158">①</text>
+  <polygon points="775,180 805,180 790,206" fill="#ffe066" stroke="#b08900" stroke-width="2"/>
+  <line x1="775" y1="208" x2="805" y2="208" stroke="#b08900" stroke-width="2.5"/>
+  <path d="M790 140 V180 M790 208 V250" stroke="#b08900" stroke-width="2"/>
+  <text class="pin" x="798" y="244">③</text>
+  <text class="s" x="730" y="232">LED</text>
+  <path class="w dim" d="M860 195 H890"/><text class="s" x="865" y="186">② 未接続</text>
+
+  <!-- ===== lamp ③ -> OUT- ===== -->
+  <path class="w gndw" d="M500 250 V300"/>
+  <path class="w gndw" d="M790 250 V300"/>
+
+  <!-- ===== D4184 board L ===== -->
+  <rect class="brd" x="360" y="290" width="200" height="140" rx="10"/>
+  <text class="t" x="370" y="312">D4184基板 L</text>
+  <text class="pin" x="508" y="312">OUT−</text>
+  <!-- mosfet -->
+  <path class="w sw" d="M500 300 V330 H486 M486 326 V374 M478 334 V366 M486 370 H500 V420"/>
+  <path class="w sw" d="M478 350 H440"/>
+  <polygon points="490,350 500,344 500,356" fill="var(--sw)"/>
+  <text class="s" x="508" y="356">MOSFET</text>
+  <text class="pin" x="508" y="422">VIN−</text>
+  <!-- opto -->
+  <rect class="opto" x="378" y="334" width="62" height="52" rx="6"/>
+  <text class="s" x="384" y="356">フォト</text>
+  <text class="s" x="384" y="374">カプラ</text>
+  <path class="w sigw" d="M395 386 V430"/>
+  <path class="w sgnd" d="M425 386 V430"/>
+  <text class="pin" x="370" y="424" style="fill:var(--sig)">TRIG</text>
+  <text class="pin" x="430" y="424" style="fill:#4c6ef5">GND</text>
+
+  <!-- ===== D4184 board R ===== -->
+  <rect class="brd" x="650" y="290" width="200" height="140" rx="10"/>
+  <text class="t" x="660" y="312">D4184基板 R</text>
+  <text class="pin" x="798" y="312">OUT−</text>
+  <path class="w sw" d="M790 300 V330 H776 M776 326 V374 M768 334 V366 M776 370 H790 V420"/>
+  <path class="w sw" d="M768 350 H730"/>
+  <polygon points="780,350 790,344 790,356" fill="var(--sw)"/>
+  <text class="s" x="798" y="356">MOSFET</text>
+  <text class="pin" x="798" y="422">VIN−</text>
+  <rect class="opto" x="668" y="334" width="62" height="52" rx="6"/>
+  <text class="s" x="674" y="356">フォト</text>
+  <text class="s" x="674" y="374">カプラ</text>
+  <path class="w sigw" d="M685 386 V430"/>
+  <path class="w sgnd" d="M715 386 V430"/>
+  <text class="pin" x="660" y="424" style="fill:var(--sig)">TRIG</text>
+  <text class="pin" x="720" y="424" style="fill:#4c6ef5">GND</text>
+
+  <!-- ===== VIN- -> battery - rail ===== -->
+  <path class="w gndw" d="M500 420 V480"/>
+  <path class="w gndw" d="M790 420 V480"/>
+  <path class="w gndw" d="M110 480 H380 A15 15 0 0 1 410 480 A15 15 0 0 1 440 480 H670 A15 15 0 0 1 700 480 A15 15 0 0 1 730 480 H790"/>
+  <circle class="dot" cx="500" cy="480" r="5"/>
+  <text class="s" x="130" y="472">バッテリー−へ直接(一点に集める)</text>
+
+  <!-- ===== ESP signals (cross the rail, not connected) ===== -->
+  <path class="w sigw" d="M395 430 V560"/>
+  <path class="w sgnd" d="M425 430 V560"/>
+  <path class="w sigw" d="M685 430 V560"/>
+  <path class="w sgnd" d="M715 430 V560"/>
+  <path class="w sgnd" d="M425 545 H715"/>
+  <circle cx="425" cy="545" r="4" fill="#748ffc"/><circle cx="715" cy="545" r="4" fill="#748ffc"/>
+  <text class="s" x="470" y="537">GNDは2枚ぶんをまとめてESPのGNDへ</text>
+
+  <!-- ===== ESP32 ===== -->
+  <rect class="espb" x="330" y="560" width="560" height="80" rx="10"/>
+  <text class="pin" x="378" y="580" style="fill:var(--sig)">GPIO6</text>
+  <text class="pin" x="430" y="580" style="fill:#4c6ef5">GND</text>
+  <text class="pin" x="668" y="580" style="fill:var(--sig)">GPIO4</text>
+  <text class="pin" x="720" y="580" style="fill:#4c6ef5">GND</text>
+  <text class="t" x="480" y="612">ESP32-S3(hibeam_live のまま)</text>
+  <text class="s" x="480" y="630">GPIO5(EN)は使わない。3V3・5Vもつながない</text>
+
+  <!-- USB -->
+  <path class="w" d="M330 600 H250" stroke="#868e96" stroke-width="3"/>
+  <rect x="150" y="580" width="100" height="40" rx="6" fill="#fff" stroke="#868e96"/>
+  <text class="s" x="162" y="598">Mac(USB-C)</text>
+  <text class="s" x="162" y="614">給電と操作</text>
+  <text class="s" x="40" y="520">ESPのGNDとバッテリー−は</text>
+  <text class="s" x="40" y="538">つながない(フォトカプラで分離)</text>
+</svg>
+</div>
+
+<h2>つなぎ方の一覧</h2>
+<table>
+<tr><th>どこから</th><th>どこへ</th><th>電線</th></tr>
+<tr><td>バッテリー＋</td><td>ヒューズ5A → 左右テールの①</td><td>0.5sq以上(テールは1灯1A未満と推測)</td></tr>
+<tr><td>左テールの③</td><td>D4184基板 L の OUT−</td><td>0.5sq以上</td></tr>
+<tr><td>右テールの③</td><td>D4184基板 R の OUT−</td><td>0.5sq以上</td></tr>
+<tr><td>基板L・基板R の VIN−</td><td>バッテリー−</td><td>0.5sq以上</td></tr>
+<tr><td>ESP32 GPIO6 / GPIO4</td><td>基板L / 基板R の TRIG</td><td>ジャンパー線</td></tr>
+<tr><td>ESP32 GND</td><td>基板L・基板R の TRIG側 GND</td><td>ジャンパー線</td></tr>
+</table>
+<p>基板のVIN＋・OUT＋は使いません。ランプの＋はヒューズから直接つなぎます。</p>
+
+<h2>動かし方と注意</h2>
+<p>ファームはhibeam_liveをそのまま使います。GPIO4が画面の1ch目(右)、GPIO6が2ch目(左)で、どちらもHIGHで基板が閉じて点灯します。起動時は両ピンLOWなので、ESPを差しても消灯のままです。</p>
+<p>ESPのGNDとバッテリー−を分けてよいのは、D4184基板のTRIG側と出力側がフォトカプラで分かれているためです(推測)。組む前に、基板のTRIG側GNDとVIN−のあいだに導通がないことをテスターで確かめてください。</p>
+<p>③がGNDであることは、まだ推測です。最初はlamp-liveで100%を出して点灯を確かめ、その後に調光を試します。フォトカプラは速い入り切りが苦手なので、1000Hzで低い%が効かない・ちらつく場合は、周波数を200〜500Hzへ下げて比べます(推測)。</p>
+</main></body></html>

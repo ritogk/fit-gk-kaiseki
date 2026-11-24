@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>テールGND側制御</title>
+<style>
+:root { color-scheme: light; --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --sub:#5b6675; --line:#d5dae2;
+  --pw:#d9480f; --sig:#1971c2; --gnd:#343a40; --lamp:#b08900; }
+* { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.7 -apple-system,"Hiragino Sans",sans-serif; }
+main { max-width:1020px; margin:0 auto; padding:24px 16px 48px; }
+h1 { font-size:22px; margin:0 0 6px; } h2 { font-size:16px; margin:26px 0 8px; }
+p { margin:6px 0; color:var(--sub); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; overflow-x:auto; }
+svg { width:100%; min-width:760px; height:auto; display:block; }
+.w { fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.pw { stroke:var(--pw); stroke-width:4; } .sigw { stroke:var(--sig); } .gndw { stroke:var(--gnd); stroke-width:4; }
+.dimw { stroke:#adb5bd; stroke-dasharray:5 5; }
+.box { fill:#eef2f7; stroke:#8c98a8; stroke-width:1.5; }
+.q { fill:#e7f5ff; stroke:#1971c2; stroke-width:2; }
+.lamp { fill:#fff3bf; stroke:#b08900; stroke-width:2; }
+.fuse { fill:#fff; stroke:var(--pw); stroke-width:2; }
+text { font-family:-apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); font-size:14px; }
+.t { font-weight:700; font-size:15px; } .s { font-size:12px; fill:var(--sub); }
+table { border-collapse:collapse; width:100%; background:#fff; font-size:14px; }
+th,td { border:1px solid var(--line); padding:6px 10px; text-align:left; } th { background:#eef2f7; }
+.lg { display:inline-block; width:22px; height:4px; vertical-align:middle; margin:0 6px 0 14px; }
+</style></head><body><main>
+<h1>リアテールをGND側で調光する配線</h1>
+<p>車のカプラーは抜き、ランプ側へ自作の住友090型HW 3Pを挿す。停車中のテスト専用。テール端子へ12Vを常時かけ、GND端子をMOSFET基板(D4184型)で入り切りして明るさを変える。</p>
+<p>
+<span class="lg" style="background:var(--pw)"></span>12V
+<span class="lg" style="background:var(--gnd)"></span>GND(ランプ戻り)
+<span class="lg" style="background:var(--sig)"></span>ESPの信号
+<span class="lg" style="background:#adb5bd"></span>未接続
+</p>
+
+<div class="card">
+<svg viewBox="0 0 900 560">
+  <!-- battery -->
+  <rect class="box" x="20" y="40" width="130" height="80" rx="8"/>
+  <text class="t" x="40" y="72">12Vバッテリー</text>
+  <text x="40" y="100">＋</text><text x="120" y="100">−</text>
+
+  <!-- + line with fuse -->
+  <path class="w pw" d="M45 40 V20 H230"/>
+  <rect class="fuse" x="230" y="8" width="60" height="24" rx="4"/>
+  <text class="s" x="240" y="25">ヒューズ5A</text>
+  <path class="w pw" d="M290 20 H700"/>
+  <path class="w pw" d="M330 20 V120"/>
+  <path class="w pw" d="M700 20 V120"/>
+
+  <!-- lamps -->
+  <rect class="lamp" x="250" y="120" width="160" height="130" rx="10"/>
+  <text class="t" x="290" y="145">左テール</text>
+  <text x="262" y="172">① テール(菱形に点)</text>
+  <text x="262" y="200" style="fill:#868e96">② ブレーキ 未接続</text>
+  <text x="262" y="228">③ GND</text>
+  <rect class="lamp" x="620" y="120" width="160" height="130" rx="10"/>
+  <text class="t" x="660" y="145">右テール</text>
+  <text x="632" y="172">① テール(菱形に点)</text>
+  <text x="632" y="200" style="fill:#868e96">② ブレーキ 未接続</text>
+  <text x="632" y="228">③ GND</text>
+  <path class="w dimw" d="M410 195 H440"/><path class="w dimw" d="M780 195 H810"/>
+
+  <!-- lamp GND to mosfet -->
+  <path class="w gndw" d="M330 250 V320"/>
+  <path class="w gndw" d="M700 250 V320"/>
+
+  <!-- mosfet boards -->
+  <rect class="q" x="250" y="320" width="160" height="100" rx="8"/>
+  <text class="t" x="262" y="345">MOSFET基板 L</text>
+  <text class="s" x="262" y="368">OUT−: ランプ③から</text>
+  <text class="s" x="262" y="388">VIN−: バッテリー−へ</text>
+  <text class="s" x="262" y="408">TRIG / GND: ESPから</text>
+  <rect class="q" x="620" y="320" width="160" height="100" rx="8"/>
+  <text class="t" x="632" y="345">MOSFET基板 R</text>
+  <text class="s" x="632" y="368">OUT−: ランプ③から</text>
+  <text class="s" x="632" y="388">VIN−: バッテリー−へ</text>
+  <text class="s" x="632" y="408">TRIG / GND: ESPから</text>
+
+  <!-- VIN- to battery - -->
+  <path class="w gndw" d="M300 420 V470 H125 V120"/>
+  <path class="w gndw" d="M670 420 V470 H300"/>
+
+  <!-- ESP -->
+  <rect class="box" x="440" y="480" width="170" height="70" rx="8"/>
+  <text class="t" x="455" y="505">ESP32-S3</text>
+  <text class="s" x="455" y="525">GPIO4 → L、GPIO6 → R</text>
+  <text class="s" x="455" y="542">GND → 両基板のTRIG側GND</text>
+  <path class="w sigw" d="M470 480 V440 H380 V420"/>
+  <path class="w sigw" d="M580 480 V440 H750 V420"/>
+</svg>
+</div>
+
+<h2>ピンの割り当て(2026-11-23の実測から)</h2>
+<table>
+<tr><th>ランプ側の端子</th><th>実測</th><th>この配線でつなぐ先</th></tr>
+<tr><td>① 菱形の中心に点の刻印</td><td>純正点灯時に一定6.1V。12V直結で点灯を確認</td><td>ヒューズ経由で12V</td></tr>
+<tr><td>③ 0Vだったピン</td><td>0V</td><td>MOSFET基板のOUT−(GNDと推測)</td></tr>
+<tr><td>② 残りの1本</td><td>未測定</td><td>何もつながない(ブレーキと推測)</td></tr>
+</table>
+<p>③がGNDであることと②がブレーキであることは推測で、まだ確定していない。最初は100%点灯で光るかを確かめてから、PWMを入れる。</p>
+
+<h2>注意</h2>
+<p>D4184型の基板は入力にフォトカプラがあり、1000HzのPWMに追従できるかは未確認である。点滅やちらつきが出たら、周波数を下げて(例: 200Hz)比べる。手持ちのHW-039でも同じ①・③の割り当てで調光できる(HW-039はプラス側を切る方式)。</p>
+</main></body></html>

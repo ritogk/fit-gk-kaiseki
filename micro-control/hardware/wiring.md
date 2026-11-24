@@ -4,6 +4,7 @@
 > **1灯だけのシンプル結線図(回路の流れ理解用)**: [single-lamp-wiring.html](single-lamp-wiring.html) — 17ch版の1ch分を抜き出したもの。部品クリックで詳細表示、各区間に電線サイズタグ付き。生成元は [gen_single_lamp.py](gen_single_lamp.py)。純正線は茶破線(給電元ではなく切替リレーNC側)で描き分けている
 > **机上組み立てガイド(1灯)**: [single-lamp-build.html](single-lamp-build.html) — ブレッドボード可否の区分(信号=可/電力=禁止)・監視タップのブレッドボード配置・組立手順。生成元は [gen_single_lamp_build.py](gen_single_lamp_build.py)
 > **ユニバーサル基板集約図(1灯・恒久用)**: [single-lamp-board.html](single-lamp-board.html) — 基板に載せる範囲(端子台・監視タップ・BTS6143D・ESP)と外置き(リレー・DCDC)の区分。生成元は [gen_single_board.py](gen_single_board.py)
+> **最小構成8ch(ぐるぐる点灯の初回実験)**: [minimal-chase-8ch.html](minimal-chase-8ch.html) — ハイビーム・ウィンカー4灯・バックランプの8chをESP1台+BTS6143D×8で回す差し替え式の仮設構成。リレー・CAN・DCDC・監視タップなし。生成元は [gen_minimal_chase.py](gen_minimal_chase.py)
 > 以下の本文は動作確認済みのCH1(フォグ×BTS7960)構成の記録。
 
 ```

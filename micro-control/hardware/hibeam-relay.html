@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HW-039とリレーでハイビーム制御</title>
+<style>
+:root { color-scheme: light; --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --sub:#5b6675; --line:#d5dae2;
+  --pw:#d9480f; --out:#c92a2a; --sig:#1971c2; --ctl:#2f9e44; --gnd:#343a40; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.7 -apple-system,"Hiragino Sans",sans-serif; }
+main { max-width:1020px; margin:0 auto; padding:24px 16px 48px; }
+h1 { font-size:22px; margin:0 0 6px; } h2 { font-size:16px; margin:26px 0 8px; }
+p { margin:6px 0; color:var(--sub); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; overflow-x:auto; }
+svg { width:100%; min-width:720px; height:auto; display:block; }
+.w { fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.pw { stroke:var(--pw); stroke-width:5; } .outw { stroke:var(--out); stroke-width:5; }
+.sigw { stroke:var(--sig); } .ctlw { stroke:var(--ctl); } .gndw { stroke:var(--gnd); }
+.dimw { stroke:#adb5bd; stroke-dasharray:4 4; } .lampx { stroke:#b08900; stroke-width:2; }
+.box { fill:#eef2f7; stroke:#8c98a8; stroke-width:1.5; }
+.bts { fill:#fff0f0; stroke:#c92a2a; stroke-width:2; }
+.q { fill:#e7f5ff; stroke:#1971c2; stroke-width:2; }
+.part { fill:#fff; stroke:#5b6675; stroke-width:1.5; }
+.lamp { fill:#fff3bf; stroke:#b08900; stroke-width:2; }
+.dot { fill:var(--ctl); } .dotg { fill:var(--gnd); }
+.ttl { font:700 15px -apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); }
+.lbl { font:12px -apple-system,"Hiragino Sans",sans-serif; fill:var(--sub); }
+.pin { font:700 12.5px -apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); }
+.dim { fill:#adb5bd; }
+.legend span { display:inline-block; margin-right:16px; font-size:13px; color:var(--sub); }
+.legend i { display:inline-block; width:22px; height:4px; border-radius:2px; vertical-align:middle; margin-right:6px; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media (max-width:640px) { .two { grid-template-columns:1fr; } }
+.st { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 16px; }
+.st b { display:block; margin-bottom:4px; }
+ol { margin:4px 0; padding-left:20px; color:var(--sub); }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th,td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:left; }
+th { color:var(--sub); font-weight:600; }
+
+.stw { stroke:#7048e8; stroke-dasharray:7 5; } .selw { stroke:#e67700; }
+.rly { fill:#eef4ff; stroke:#1c4fa0; stroke-width:2; } .ch { fill:#fff; stroke:#1c4fa0; stroke-width:1.5; }
+.end { fill:#fff; stroke:#5b6675; stroke-width:1.5; }
+</style></head><body><main>
+<h1>HW-039とリレーモジュールでハイビーム左右を制御する配線</h1>
+<p>リレーは、各ランプを「純正の線」と「HW-039の出力」のどちらにつなぐかを切り替えます。リレーに電気が来ていない間は、ランプは純正の線につながります。</p>
+<div class="card"><svg viewBox="0 0 1240 620" role="img" aria-label="HW-039とリレーモジュールでハイビーム左右を制御する配線図">
+<rect x="40" y="140" width="170" height="310" rx="8" class="box"/><text x="125" y="166" class="ttl" text-anchor="middle">ESP32-S3</text>
+<text x="200" y="194" class="pin" text-anchor="end">3V3</text><path d="M210 190 H400" class="w ctlw"/>
+<text x="200" y="234" class="pin" text-anchor="end">GPIO4</text><path d="M210 230 H400" class="w sigw"/>
+<text x="200" y="274" class="pin" text-anchor="end">GPIO6</text><path d="M210 270 H400" class="w sigw"/>
+<text x="200" y="314" class="pin" text-anchor="end">GPIO5</text><path d="M210 310 H400" class="w ctlw"/>
+<text x="200" y="374" class="pin" text-anchor="end">GND</text><path d="M210 370 H400" class="w gndw"/>
+<path d="M330 310 V335 H400" class="w ctlw"/><circle cx="330" cy="310" r="4" class="dot"/>
+<text x="305" y="222" class="lbl" text-anchor="middle">PWM(右)</text><text x="305" y="262" class="lbl" text-anchor="middle">PWM(左)</text><text x="270" y="302" class="lbl" text-anchor="middle">出力許可</text>
+<text x="200" y="414" class="pin" text-anchor="end">GPIO9</text><path d="M210 410 H350 V470 H760 M735 470 V490 H760" class="w selw"/><circle cx="735" cy="470" r="4" fill="#e67700"/><text x="500" y="462" class="lbl" text-anchor="middle">純正/自作の切替</text>
+<rect x="400" y="110" width="240" height="320" rx="10" class="bts"/><text x="520" y="136" class="ttl" text-anchor="middle">HW-039(IBT_2)</text><text x="520" y="154" class="lbl" text-anchor="middle">BTS7960 ×2</text>
+<text x="410" y="194" class="pin">VCC</text>
+<text x="410" y="234" class="pin">RPWM</text>
+<text x="410" y="274" class="pin">LPWM</text>
+<text x="410" y="314" class="pin">R_EN</text>
+<text x="410" y="339" class="pin">L_EN</text>
+<text x="410" y="374" class="pin">GND</text>
+<text x="630" y="194" class="pin" text-anchor="end">B+</text>
+<text x="630" y="249" class="pin" text-anchor="end">M+</text>
+<text x="630" y="324" class="pin" text-anchor="end">M−</text>
+<text x="630" y="374" class="pin" text-anchor="end">B−</text>
+<rect x="440" y="20" width="130" height="56" rx="8" class="box"/><text x="505" y="44" class="ttl" text-anchor="middle">バッテリー</text><text x="505" y="64" class="lbl" text-anchor="middle">12V +</text>
+<path d="M570 48 H700 V90 M700 120 V190 H640" class="w pw"/><rect x="682" y="90" width="36" height="30" rx="5" class="part"/><text x="700" y="110" class="lbl" text-anchor="middle">15A</text><text x="676" y="110" class="lbl" text-anchor="end">ヒューズ</text>
+<rect x="760" y="160" width="200" height="390" rx="10" class="rly"/><text x="860" y="184" class="ttl" text-anchor="middle">8chリレーモジュール</text>
+<rect x="780" y="200" width="160" height="90" rx="8" class="ch"/><text x="860" y="250" class="ttl" text-anchor="middle">CH1</text><text x="788" y="249" class="pin">NO</text><text x="932" y="229" class="pin" text-anchor="end">NC</text><text x="932" y="269" class="pin" text-anchor="end">COM</text>
+<rect x="780" y="340" width="160" height="90" rx="8" class="ch"/><text x="860" y="390" class="ttl" text-anchor="middle">CH2</text><text x="788" y="389" class="pin">NO</text><text x="932" y="369" class="pin" text-anchor="end">NC</text><text x="932" y="409" class="pin" text-anchor="end">COM</text>
+<text x="770" y="474" class="pin">IN1</text>
+<text x="770" y="494" class="pin">IN2</text>
+<text x="770" y="516" class="pin">VCC(ESPの3V3へ)</text>
+<text x="770" y="538" class="pin">GND</text>
+<path d="M760 512 H742" class="w ctlw"/><circle cx="738" cy="512" r="4" class="end"/>
+<text x="950" y="538" class="pin" text-anchor="end">JD-VCC</text><path d="M960 534 H990" class="w pw" style="stroke-width:3"/><circle cx="994" cy="534" r="4" class="end"/><text x="1004" y="538" class="lbl">IG 12V(キーONで12V)へ</text>
+<path d="M640 245 H780" class="w outw"/><path d="M640 320 H725 V385 H780" class="w outw"/>
+<path d="M940 225 H1060" class="w stw"/><circle cx="1064" cy="225" r="4" class="end"/><text x="1074" y="229" class="lbl">純正の右ハイビーム線(車両側)</text>
+<path d="M940 365 H1060" class="w stw"/><circle cx="1064" cy="365" r="4" class="end"/><text x="1074" y="369" class="lbl">純正の左ハイビーム線(車両側)</text>
+<path d="M940 265 H986" class="w outw"/><path d="M940 405 H986" class="w outw"/>
+<circle cx="1010" cy="265" r="24" class="lamp"/><path d="M994 249 L1026 281 M1026 249 L994 281" class="w lampx"/><text x="1044" y="270" class="ttl">ハイビーム 右</text><path d="M1010 289 V301" class="w gndw"/><path d="M996 301 H1024 M1001 306 H1019 M1006 311 H1014" class="w gndw"/>
+<circle cx="1010" cy="405" r="24" class="lamp"/><path d="M994 389 L1026 421 M1026 389 L994 421" class="w lampx"/><text x="1044" y="410" class="ttl">ハイビーム 左</text><path d="M1010 429 V441" class="w gndw"/><path d="M996 441 H1024 M1001 446 H1019 M1006 451 H1014" class="w gndw"/>
+<path d="M640 370 H665 V580 H1150 V590 M760 534 H720 V580" class="w gndw"/><circle cx="720" cy="580" r="4" class="dotg"/>
+<path d="M1136 590 H1164 M1141 595 H1159 M1146 600 H1154" class="w gndw"/>
+<text x="1120" y="602" class="lbl" text-anchor="end">車体(GND)</text>
+</svg></div>
+<p class="legend"><span><i style="background:var(--pw)"></i>12V入力</span><span><i style="background:var(--out)"></i>ランプへの出力</span><span><i style="background:#7048e8"></i>純正の線(破線)</span><span><i style="background:var(--sig)"></i>PWM信号</span><span><i style="background:#e67700"></i>切替信号</span><span><i style="background:var(--ctl)"></i>3.3V・出力許可</span><span><i style="background:var(--gnd)"></i>GND</span></p>
+
+<h2>リレーの3つの端子</h2>
+<div class="card"><table>
+<tr><th>端子</th><th>つなぐ先</th><th>意味</th></tr>
+<tr><td>COM</td><td>ランプの+側</td><td>常にランプへつながる共通の端子</td></tr>
+<tr><td>NC</td><td>純正のハイビーム線(車両側)</td><td>リレーOFFのときにCOMとつながる</td></tr>
+<tr><td>NO</td><td>HW-039のM+(右)・M−(左)</td><td>リレーONのときにCOMとつながる</td></tr>
+</table></div>
+<p>純正のハイビーム線は、ランプの手前で切り、車両側をNCへ、ランプ側をCOMへつなぎます。</p>
+
+<h2>動き方</h2>
+<div class="two">
+  <div class="st"><b>純正モード(リレーOFF)</b><ol>
+    <li>ESPの電源が無い、またはGPIO9が切替を指示していない。</li><li>ランプはNC経由で純正の線につながる。</li><li>純正のレバーで、普段どおり点く。</li></ol></div>
+  <div class="st"><b>自作モード(リレーON)</b><ol>
+    <li>ESPがGPIO9でリレーをONにする。</li><li>ランプはNO経由でHW-039につながる。</li><li>GPIO4(右)とGPIO6(左)のPWMで調光する。</li></ol></div>
+</div>
+
+<h2>リレーモジュールの電源と信号</h2>
+<div class="card"><table>
+<tr><th>端子</th><th>つなぐ先</th><th>注意</th></tr>
+<tr><td>IN1・IN2</td><td>ESP GPIO9(2本を束ねる)</td><td>多くのモジュールはLOWでONになる。実機で向きを確認する</td></tr>
+<tr><td>VCC</td><td>ESP 3V3</td><td>JD-VCCとのジャンパを外してからつなぐ</td></tr>
+<tr><td>JD-VCC</td><td>IG 12V(キーONで12Vが来る線)</td><td>リレーのコイル用の電源。キーOFFなら必ず純正に戻る</td></tr>
+<tr><td>GND</td><td>車体(GND)</td><td>ESP・HW-039と共通</td></tr>
+</table></div>
+<p>HW-039側の配線は hibeam-hw039.html と同じです。使うリレーは8chのうち2chで、残り6chは空きです。</p>
+</main></body></html>

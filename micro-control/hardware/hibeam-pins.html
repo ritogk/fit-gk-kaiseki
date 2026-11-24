@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ハイビーム ピン配線</title>
+<style>
+:root { color-scheme: light; --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --sub:#5b6675; --line:#d5dae2;
+  --pw:#d9480f; --out:#c92a2a; --sig:#1971c2; --ctl:#2f9e44; --gnd:#343a40; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.7 -apple-system,"Hiragino Sans",sans-serif; }
+main { max-width:1020px; margin:0 auto; padding:24px 16px 48px; }
+h1 { font-size:22px; margin:0 0 6px; } h2 { font-size:16px; margin:26px 0 8px; }
+p { margin:6px 0; color:var(--sub); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; overflow-x:auto; }
+svg { width:100%; min-width:720px; height:auto; display:block; }
+.w { fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.pw { stroke:var(--pw); stroke-width:5; } .outw { stroke:var(--out); stroke-width:5; }
+.sigw { stroke:var(--sig); } .ctlw { stroke:var(--ctl); } .gndw { stroke:var(--gnd); }
+.dimw { stroke:#adb5bd; stroke-dasharray:4 4; } .lampx { stroke:#b08900; stroke-width:2; }
+.box { fill:#eef2f7; stroke:#8c98a8; stroke-width:1.5; }
+.bts { fill:#fff0f0; stroke:#c92a2a; stroke-width:2; }
+.q { fill:#e7f5ff; stroke:#1971c2; stroke-width:2; }
+.part { fill:#fff; stroke:#5b6675; stroke-width:1.5; }
+.lamp { fill:#fff3bf; stroke:#b08900; stroke-width:2; }
+.dot { fill:var(--ctl); } .dotg { fill:var(--gnd); }
+.ttl { font:700 15px -apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); }
+.lbl { font:12px -apple-system,"Hiragino Sans",sans-serif; fill:var(--sub); }
+.pin { font:700 12.5px -apple-system,"Hiragino Sans",sans-serif; fill:var(--ink); }
+.dim { fill:#adb5bd; }
+.legend span { display:inline-block; margin-right:16px; font-size:13px; color:var(--sub); }
+.legend i { display:inline-block; width:22px; height:4px; border-radius:2px; vertical-align:middle; margin-right:6px; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media (max-width:640px) { .two { grid-template-columns:1fr; } }
+.st { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 16px; }
+.st b { display:block; margin-bottom:4px; }
+ol { margin:4px 0; padding-left:20px; color:var(--sub); }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th,td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:left; }
+th { color:var(--sub); font-weight:600; }
+
+.hdr{fill:#fff;stroke:#343a40;stroke-width:2}
+.pinbox{fill:#f8f9fa;stroke:#343a40;stroke-width:1.5}
+.nc{fill:#f1f3f5;stroke:#adb5bd;stroke-width:1.5;stroke-dasharray:4 3}
+.clip{fill:#fff4e6;stroke:#e67700;stroke-width:2}
+.unplug{fill:#f1f3f5;stroke:#adb5bd;stroke-width:2;stroke-dasharray:6 4}
+</style></head><body><main>
+<h1>ハイビーム調光(hibeam_live)のピン配線図</h1>
+<p>ESP32-S3のピン、HW-039の8ピンヘッダ、ネジ端子、ランプ側コネクタの順に、1本ずつ行き先を描いています。ファームウェアは firmware/hibeam_live です。</p>
+<div class="card"><svg viewBox="0 0 1100 640" role="img" aria-label="ESP32-S3とHW-039のピン単位の配線図">
+<rect x="40" y="100" width="170" height="400" rx="8" class="box"/><text x="125" y="126" class="ttl" text-anchor="middle">ESP32-S3</text><text x="125" y="520" class="lbl" text-anchor="middle">基板のシルク印刷で探す</text><text x="125" y="540" class="lbl" text-anchor="middle">USBはUART側→Mac</text>
+<rect x="150" y="138" width="60" height="24" rx="4" class="pinbox"/><text x="180" y="155" class="pin" text-anchor="middle">GPIO4</text>
+<rect x="150" y="182" width="60" height="24" rx="4" class="pinbox"/><text x="180" y="199" class="pin" text-anchor="middle">GPIO6</text>
+<rect x="150" y="226" width="60" height="24" rx="4" class="pinbox"/><text x="180" y="243" class="pin" text-anchor="middle">GPIO5</text>
+<rect x="150" y="402" width="60" height="24" rx="4" class="pinbox"/><text x="180" y="419" class="pin" text-anchor="middle">3V3</text>
+<rect x="150" y="446" width="60" height="24" rx="4" class="pinbox"/><text x="180" y="463" class="pin" text-anchor="middle">GND</text>
+<rect x="440" y="70" width="300" height="470" rx="10" class="bts"/><text x="590" y="96" class="ttl" text-anchor="middle">HW-039(IBT_2)</text><text x="590" y="114" class="lbl" text-anchor="middle">左: 8ピンヘッダ / 右: ネジ端子</text>
+<rect x="458" y="138" width="24" height="24" rx="3" class="pinbox"/><text x="470" y="155" class="pin" text-anchor="middle">1</text><text x="490" y="155" class="pin">RPWM</text>
+<rect x="458" y="182" width="24" height="24" rx="3" class="pinbox"/><text x="470" y="199" class="pin" text-anchor="middle">2</text><text x="490" y="199" class="pin">LPWM</text>
+<rect x="458" y="226" width="24" height="24" rx="3" class="pinbox"/><text x="470" y="243" class="pin" text-anchor="middle">3</text><text x="490" y="243" class="pin">R_EN</text>
+<rect x="458" y="270" width="24" height="24" rx="3" class="pinbox"/><text x="470" y="287" class="pin" text-anchor="middle">4</text><text x="490" y="287" class="pin">L_EN</text>
+<rect x="458" y="314" width="24" height="24" rx="3" class="nc"/><text x="470" y="331" class="pin" text-anchor="middle">5</text><text x="490" y="331" class="pin dim">R_IS(空き)</text>
+<rect x="458" y="358" width="24" height="24" rx="3" class="nc"/><text x="470" y="375" class="pin" text-anchor="middle">6</text><text x="490" y="375" class="pin dim">L_IS(空き)</text>
+<rect x="458" y="402" width="24" height="24" rx="3" class="pinbox"/><text x="470" y="419" class="pin" text-anchor="middle">7</text><text x="490" y="419" class="pin">VCC</text>
+<rect x="458" y="446" width="24" height="24" rx="3" class="pinbox"/><text x="470" y="463" class="pin" text-anchor="middle">8</text><text x="490" y="463" class="pin">GND</text>
+<path d="M210 150 H300 V150 H458" class="w sigw"/>
+<path d="M210 194 H320 V194 H458" class="w sigw"/>
+<path d="M210 238 H340 V238 H458" class="w ctlw"/>
+<path d="M340 238 V282 H458" class="w ctlw"/><circle cx="340" cy="238" r="4" class="dot"/>
+<text x="390" y="274" class="lbl" text-anchor="middle">3と4を束ねる</text>
+<path d="M210 414 H360 V414 H458" class="w ctlw"/>
+<path d="M210 458 H380 V458 H458" class="w gndw"/>
+<rect x="678" y="164" width="44" height="32" rx="4" class="part"/><circle cx="700" cy="180" r="7" class="pinbox"/><path d="M695 180 H705" class="w"/><text x="670" y="185" class="pin" text-anchor="end">M−</text>
+<rect x="678" y="234" width="44" height="32" rx="4" class="part"/><circle cx="700" cy="250" r="7" class="pinbox"/><path d="M695 250 H705" class="w"/><text x="670" y="255" class="pin" text-anchor="end">M+</text>
+<rect x="678" y="324" width="44" height="32" rx="4" class="part"/><circle cx="700" cy="340" r="7" class="pinbox"/><path d="M695 340 H705" class="w"/><text x="670" y="345" class="pin" text-anchor="end">B+</text>
+<rect x="678" y="404" width="44" height="32" rx="4" class="part"/><circle cx="700" cy="420" r="7" class="pinbox"/><path d="M695 420 H705" class="w"/><text x="670" y="425" class="pin" text-anchor="end">B−</text>
+<text x="700" y="470" class="lbl" text-anchor="middle">上から M−・M+・B+・B−</text>
+<rect x="770" y="20" width="130" height="50" rx="8" class="box"/><text x="835" y="42" class="ttl" text-anchor="middle">バッテリー</text><text x="835" y="60" class="lbl" text-anchor="middle">12V +</text>
+<rect x="930" y="16" width="150" height="80" rx="8" class="box"/><text x="1005" y="36" class="ttl" text-anchor="middle">ヒューズ</text><rect x="985" y="50" width="40" height="30" rx="5" class="part"/><text x="1005" y="70" class="lbl" text-anchor="middle">15A</text>
+<path d="M900 45 H930" class="w pw"/>
+<path d="M1005 80 V120 H760 V340 H722" class="w pw"/>
+<text x="880" y="114" class="lbl" text-anchor="middle">2.0sq</text>
+<path d="M722 180 H752 A8 8 0 0 1 768 180 H820 V194 H930" class="w outw"/><rect x="870" y="187" width="20" height="14" rx="4" class="clip"/>
+<path d="M722 250 H752 A8 8 0 0 1 768 250 H800 V334 H897 A8 8 0 0 1 913 334 H930" class="w outw"/><rect x="860" y="327" width="20" height="14" rx="4" class="clip"/>
+<rect x="930" y="176" width="40" height="68" rx="6" class="box"/><text x="944" y="198" class="pin">+</text><text x="944" y="236" class="pin">−</text><circle cx="1020" cy="210" r="24" class="lamp"/><path d="M1004 194 L1036 226 M1036 194 L1004 226" class="w lampx"/><path d="M970 194 H996 M970 226 H996" class="w"/><text x="990" y="166" class="ttl" text-anchor="middle">ハイビーム 左(M−)</text>
+<rect x="930" y="316" width="40" height="68" rx="6" class="box"/><text x="944" y="338" class="pin">+</text><text x="944" y="376" class="pin">−</text><circle cx="1020" cy="350" r="24" class="lamp"/><path d="M1004 334 L1036 366 M1036 334 L1004 366" class="w lampx"/><path d="M970 334 H996 M970 366 H996" class="w"/><text x="990" y="306" class="ttl" text-anchor="middle">ハイビーム 右(M+)</text>
+<path d="M930 226 H905 V366 H930" class="w gndw"/><rect x="908" y="219" width="20" height="14" rx="4" class="clip"/><rect x="908" y="359" width="20" height="14" rx="4" class="clip"/>
+<path d="M905 366 V580" class="w gndw"/><circle cx="905" cy="366" r="4" class="dotg"/>
+<path d="M722 420 H740 V580 H905" class="w gndw"/><circle cx="905" cy="580" r="4" class="dotg"/>
+<path d="M905 580 V596" class="w gndw"/><path d="M891 596 H919 M896 601 H914 M901 606 H909" class="w gndw"/>
+<text x="885" y="624" class="lbl" text-anchor="end">バッテリー−(車体)</text>
+</svg></div>
+<p class="legend"><span><i style="background:var(--pw)"></i>12V入力</span><span><i style="background:var(--out)"></i>ランプへの出力</span><span><i style="background:var(--sig)"></i>PWM信号</span><span><i style="background:var(--ctl)"></i>3.3V・出力許可</span><span><i style="background:var(--gnd)"></i>GND</span><span><i style="background:#e67700"></i>ワニ口クリップ</span></p>
+
+<h2>信号線(ESP32-S3 → HW-039ヘッダ)</h2>
+<div class="card"><table>
+<tr><th>ESP32-S3</th><th>HW-039ヘッダ</th><th>役割</th></tr>
+<tr><td>GPIO4</td><td>1 RPWM</td><td>右の明るさ(PWM 1kHz)</td></tr>
+<tr><td>GPIO6</td><td>2 LPWM</td><td>左の明るさ(PWM 1kHz)</td></tr>
+<tr><td>GPIO5</td><td>3 R_EN と 4 L_EN(束ねる)</td><td>出力許可。起動時はLOW</td></tr>
+<tr><td>(なし)</td><td>5 R_IS・6 L_IS</td><td>つながない</td></tr>
+<tr><td>3V3</td><td>7 VCC</td><td>ロジック電源</td></tr>
+<tr><td>GND</td><td>8 GND</td><td>信号の基準</td></tr>
+</table></div>
+
+<h2>電源線・出力線(ネジ端子)</h2>
+<div class="card"><table>
+<tr><th>端子(上から)</th><th>つなぐ先</th><th>線</th></tr>
+<tr><td>1 M−</td><td>クリップで、左ハイビームのランプ側+端子</td><td>2.0sq</td></tr>
+<tr><td>2 M+</td><td>クリップで、右ハイビームのランプ側+端子</td><td>2.0sq</td></tr>
+<tr><td>3 B+</td><td>15Aヒューズ → バッテリー+</td><td>2.0sq</td></tr>
+<tr><td>4 B−</td><td>バッテリー−(車体)</td><td>2.0sq</td></tr>
+<tr><td>(ランプ側−端子)</td><td>クリップで、左右ともバッテリー−(車体)</td><td>2.0sq</td></tr>
+</table></div>
+<p>HW-039のヘッダの並び(1 RPWM〜8 GND)は、IBT_2の一般的な表記に合わせています。基板によって印刷が異なる場合があるため、つなぐ前に基板のシルク印刷と照合してください。ネジ端子の並びは基板裏の印刷(M−、M+、B+、B−)で確認済みで、表から見ると上からこの順になります(B−がコンデンサ寄り)。</p>
+</main></body></html>
